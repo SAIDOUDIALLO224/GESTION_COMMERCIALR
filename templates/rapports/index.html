@@ -4,15 +4,32 @@
 {% block page_title %}Rapports{% endblock %}
 
 {% block content %}
-<div class="grid">
-    <div class="card" style="text-align: center; cursor: pointer;" onclick="location.href='{% url 'rapports:ventes' %}';">
-        <h3 style="color: #1e40af; margin-bottom: 10px;">📊 Rapport des Ventes</h3>
-        <p style="color: #64748b;">Consultez les ventes par période</p>
-    </div>
-    
-    <div class="card" style="text-align: center; cursor: pointer;" onclick="location.href='{% url 'rapports:stock' %}';">
-        <h3 style="color: #1e40af; margin-bottom: 10px;">📦 Rapport de Stock</h3>
-        <p style="color: #64748b;">État du stock et alertes</p>
-    </div>
+<div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Centre de rapports</h1>
+    <p class="text-sm text-gray-500 mt-1">Analysez vos ventes et votre stock avec des indicateurs lisibles.</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <a href="{% url 'rapports:ventes' %}" class="group bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md hover:border-blue-300 transition-all">
+        <div class="flex items-start justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-wide font-semibold text-blue-700">Rapports</p>
+                <h2 class="text-xl font-bold text-gray-900 mt-1">Ventes</h2>
+                <p class="text-sm text-gray-500 mt-2">Consultez les ventes par période, montants encaissés et soldes restants.</p>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center group-hover:scale-105 transition-transform">📊</div>
+        </div>
+    </a>
+
+    <a href="{% url 'rapports:stock' %}" class="group bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md hover:border-amber-300 transition-all">
+        <div class="flex items-start justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-wide font-semibold text-amber-700">Rapports</p>
+                <h2 class="text-xl font-bold text-gray-900 mt-1">Stock</h2>
+                <p class="text-sm text-gray-500 mt-2">Surveillez la valeur du stock, les niveaux critiques et les alertes.</p>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform">📦</div>
+        </div>
+    </a>
 </div>
 {% endblock %}

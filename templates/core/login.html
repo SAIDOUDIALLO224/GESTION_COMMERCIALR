@@ -4,55 +4,202 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion - GesStock Madina</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+        body { font-family: 'Segoe UI', system-ui, sans-serif; }
+        .sidebar-bg {
+            background: linear-gradient(160deg, #1e3a8a 0%, #1e40af 40%, #2563eb 100%);
         }
-        .login-container {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            width: 100%;
-            max-width: 400px;
+        .feature-card {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            backdrop-filter: blur(4px);
         }
-        .login-container h1 {
-            text-align: center;
-            color: #1e40af;
-            margin-bottom: 30px;
-            font-size: 28px;
+        .input-field {
+            transition: border-color .2s, box-shadow .2s;
         }
-        .login-container .form-group {
-            margin-bottom: 20px;
+        .input-field:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
         }
-        .login-container button {
-            width: 100%;
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
+        .fade-up { animation: fadeUp .5s ease both; }
+        .fade-up-2 { animation: fadeUp .5s ease .1s both; }
+        .fade-up-3 { animation: fadeUp .5s ease .2s both; }
     </style>
 </head>
-<body>
-    <div class="login-container">
-        <h1>🏪 GesStock</h1>
-        <form method="post">
-            {% csrf_token %}
-            {% if next %}
-            <input type="hidden" name="next" value="{{ next }}">
-            {% endif %}
-            <div class="form-group">
-                <label>Identifiant</label>
-                <input type="text" name="username" class="form-control" required>
+<body class="min-h-screen flex">
+
+    <!-- ===== Sidebar / panneau gauche ===== -->
+    <aside class="hidden lg:flex lg:w-[42%] xl:w-[45%] sidebar-bg flex-col justify-between px-10 xl:px-14 py-12 text-white">
+
+        <!-- Logo & nom -->
+        <div class="fade-up">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
+                    <!-- Heroicon: building-storefront -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 text-white">
+                        <path d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-xl font-bold leading-none">GesStock</p>
+                    <p class="text-xs text-blue-200 font-medium">Madina</p>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Mot de passe</label>
-                <input type="password" name="password" class="form-control" required>
+            <h2 class="mt-8 text-3xl xl:text-4xl font-bold leading-snug">
+                Gérez votre stock<br>
+                <span class="text-blue-200">en toute simplicité.</span>
+            </h2>
+            <p class="mt-4 text-blue-100 text-sm leading-relaxed max-w-xs">
+                Suivez vos ventes, clients, fournisseurs et mouvements de stock depuis une seule interface.
+            </p>
+        </div>
+
+        <!-- Fonctionnalités -->
+        <div class="fade-up-2 space-y-3 my-10">
+            <div class="feature-card rounded-xl px-4 py-3 flex items-center gap-3">
+                <!-- Heroicon: chart-bar -->
+                <div class="w-9 h-9 bg-blue-400/30 rounded-lg flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-blue-200">
+                        <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.036-.84-1.875-1.875-1.875h-.75ZM9.75 8.625c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-.75a1.875 1.875 0 0 1-1.875-1.875V8.625ZM3 13.125c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v6.75c0 1.035-.84 1.875-1.875 1.875h-.75A1.875 1.875 0 0 1 3 19.875v-6.75Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold">Rapports & statistiques</p>
+                    <p class="text-xs text-blue-200">Ventes, stock, mouvements</p>
+                </div>
             </div>
-            <button type="submit" class="btn btn-primary">Connexion</button>
-        </form>
-    </div>
+            <div class="feature-card rounded-xl px-4 py-3 flex items-center gap-3">
+                <!-- Heroicon: cube -->
+                <div class="w-9 h-9 bg-blue-400/30 rounded-lg flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-blue-200">
+                        <path d="M12.378 1.602a.75.75 0 0 0-.756 0L3 6.632l9 5.25 9-5.25-8.622-5.03ZM21.75 7.93l-9 5.25v9l8.628-5.032a.75.75 0 0 0 .372-.648V7.93ZM11.25 22.18v-9l-9-5.25v8.57a.75.75 0 0 0 .372.648l8.628 5.033Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold">Gestion des produits & stock</p>
+                    <p class="text-xs text-blue-200">Alertes, seuils, inventaire</p>
+                </div>
+            </div>
+            <div class="feature-card rounded-xl px-4 py-3 flex items-center gap-3">
+                <!-- Heroicon: users -->
+                <div class="w-9 h-9 bg-blue-400/30 rounded-lg flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-blue-200">
+                        <path d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.003l-.001.119a.75.75 0 0 1-.363.63 13.067 13.067 0 0 1-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 0 1-.364-.63l-.001-.122ZM17.25 19.128l-.001.144a2.25 2.25 0 0 1-.233.96 10.088 10.088 0 0 0 5.06-1.01.75.75 0 0 0 .42-.643 4.875 4.875 0 0 0-6.957-4.611 8.586 8.586 0 0 1 1.71 5.157v.003Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold">Clients & fournisseurs</p>
+                    <p class="text-xs text-blue-200">Suivi des créances et paiements</p>
+                </div>
+            </div>
+            <div class="feature-card rounded-xl px-4 py-3 flex items-center gap-3">
+                <!-- Heroicon: document-text -->
+                <div class="w-9 h-9 bg-blue-400/30 rounded-lg flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-blue-200">
+                        <path fill-rule="evenodd" d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0 0 16.5 9h-1.875a1.875 1.875 0 0 1-1.875-1.875V5.25A3.75 3.75 0 0 0 9 1.5H5.625ZM7.5 15a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5A.75.75 0 0 1 7.5 15Zm.75-6.75a.75.75 0 0 0 0 1.5H12a.75.75 0 0 0 0-1.5H8.25Z" clip-rule="evenodd"/>
+                        <path d="M12.971 1.816A5.23 5.23 0 0 1 14.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 0 1 3.434 1.279 9.768 9.768 0 0 0-6.963-6.963Z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold">Factures PDF</p>
+                    <p class="text-xs text-blue-200">Génération automatique</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer sidebar -->
+        <div class="fade-up-3 text-xs text-blue-300">
+            &copy; 2026 GesStock Madina — Tous droits réservés
+        </div>
+    </aside>
+
+    <!-- ===== Panneau droit : formulaire ===== -->
+    <main class="flex-1 flex items-center justify-center bg-gray-50 px-6 py-12">
+        <div class="w-full max-w-md fade-up">
+
+            <!-- En-tête mobile (caché sur desktop) -->
+            <div class="lg:hidden flex items-center gap-2 mb-8">
+                <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-white">
+                        <path d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/>
+                    </svg>
+                </div>
+                <span class="text-lg font-bold text-gray-900">GesStock <span class="text-blue-600">Madina</span></span>
+            </div>
+
+            <!-- Card formulaire -->
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 px-8 py-10">
+                <div class="mb-8">
+                    <h1 class="text-2xl font-bold text-gray-900">Connexion</h1>
+                    <p class="mt-1 text-sm text-gray-500">Entrez vos identifiants pour accéder à votre espace.</p>
+                </div>
+
+                {% if form.errors %}
+                <div class="mb-5 flex items-start gap-3 rounded-lg bg-red-50 border border-red-200 px-4 py-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 text-red-500 shrink-0 mt-0.5">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM8.28 7.22a.75.75 0 0 0-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 1 0 1.06 1.06L10 11.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L11.06 10l1.72-1.72a.75.75 0 0 0-1.06-1.06L10 8.94 8.28 7.22Z" clip-rule="evenodd"/>
+                    </svg>
+                    <p class="text-sm text-red-700 font-medium">Identifiant ou mot de passe incorrect.</p>
+                </div>
+                {% endif %}
+
+                <form method="post" class="space-y-5">
+                    {% csrf_token %}
+                    {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
+
+                    <!-- Champ identifiant -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Identifiant</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-gray-400">
+                                    <path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.23 1.23 0 0 0 .41 1.412A9.957 9.957 0 0 0 10 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 0 0-13.074.003Z"/>
+                                </svg>
+                            </span>
+                            <input type="text" name="username" autofocus required
+                                class="input-field w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 placeholder-gray-400"
+                                placeholder="Nom d'utilisateur">
+                        </div>
+                    </div>
+
+                    <!-- Champ mot de passe -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1.5">Mot de passe</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-gray-400">
+                                    <path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clip-rule="evenodd"/>
+                                </svg>
+                            </span>
+                            <input type="password" name="password" required
+                                class="input-field w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-white text-gray-900 placeholder-gray-400"
+                                placeholder="••••••••">
+                        </div>
+                    </div>
+
+                    <!-- Bouton connexion -->
+                    <button type="submit"
+                        class="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-[.98] text-white font-semibold text-sm py-2.5 rounded-lg transition-all duration-150 mt-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                            <path fill-rule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clip-rule="evenodd"/>
+                            <path fill-rule="evenodd" d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-1.08a.75.75 0 1 0-1.04-1.08l-2.5 2.571a.75.75 0 0 0 0 1.037l2.5 2.572a.75.75 0 1 0 1.04-1.08L8.704 10.75H18.25A.75.75 0 0 0 19 10Z" clip-rule="evenodd"/>
+                        </svg>
+                        Se connecter
+                    </button>
+                </form>
+            </div>
+
+            <p class="mt-6 text-center text-xs text-gray-400">&copy; 2026 GesStock Madina</p>
+        </div>
+    </main>
+
 </body>
 </html>

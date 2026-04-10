@@ -1,45 +1,206 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Rapport Stock - GesStock Madina{% endblock %}
 {% block page_title %}Rapport de Stock{% endblock %}
 
 {% block content %}
-<div class="stat-card">
-    <div class="stat-card-label">Valeur Totale du Stock</div>
-    <div class="stat-value">{{ total_stock_value }} GNF</div>
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+        <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Date debut (mouvements)</label>
+            <input type="date" name="date_debut" value="{{ date_debut }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div>
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Date fin (mouvements)</label>
+            <input type="date" name="date_fin" value="{{ date_fin }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex gap-2 md:col-span-2">
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">Filtrer</button>
+            <a href="{% url 'rapports:export_pdf_stock' %}?date_debut={{ date_debut|default_if_none:'' }}&date_fin={{ date_fin|default_if_none:'' }}" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">Exporter PDF</a>
+        </div>
+    </form>
 </div>
 
-<div class="card" style="margin-top: 30px;">
-    <h2 style="margin-bottom: 20px;">État du Stock</h2>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Produit</th>
-                <th>Catégorie</th>
-                <th>Stock</th>
-                <th>Seuil</th>
-                <th>Valeur</th>
-                <th>Statut</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for produit in produits %}
-            <tr>
-                <td><strong>{{ produit.nom }}</strong></td>
-                <td>{{ produit.categorie.nom }}</td>
-                <td>{{ produit.stock_actuel }} {{ produit.unite_mesure }}</td>
-                <td>{{ produit.seuil_alerte }}</td>
-                <td>{{ produit.stock_actuel|floatformat:2 }} GNF</td>
-                <td>
-                    {% if produit.en_alerte %}
-                        <span class="badge badge-danger">⚠️ Alerte</span>
-                    {% else %}
-                        <span class="badge badge-success">✓ OK</span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Valeur du stock par categorie</h3>
+        <div class="h-64">
+            <canvas id="stockCategorieChart"></canvas>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Etat global des produits</h3>
+        <div class="h-64">
+            <canvas id="stockAlertChart"></canvas>
+        </div>
+    </div>
 </div>
+
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+    <div class="bg-white rounded-xl border border-blue-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-blue-700">Valeur totale du stock</p>
+        <p class="mt-1 text-2xl font-bold text-blue-700">{{ total_stock_value|floatformat:0|intcomma }}</p>
+        <p class="text-xs text-blue-500">GNF</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-gray-500">Produits</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900">{{ nb_produits|intcomma }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-red-700">Produits en alerte</p>
+        <p class="mt-1 text-2xl font-bold text-red-700">{{ nb_alertes|intcomma }}</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-lg font-semibold text-gray-900">Etat du stock</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Produit</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Categorie</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Stock</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Seuil</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Prix achat</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Valeur stock</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Statut</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for produit in produits %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ produit.nom }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ produit.categorie.nom }}</td>
+                    <td class="px-4 py-3 text-right {% if produit.en_alerte %}text-red-700{% else %}text-gray-900{% endif %}">{{ produit.stock_actuel|floatformat:"-3" }} {{ produit.unite_mesure }}</td>
+                    <td class="px-4 py-3 text-right text-gray-600">{{ produit.seuil_alerte|floatformat:"-3" }}</td>
+                    <td class="px-4 py-3 text-right text-gray-600">{{ produit.prix_achat|floatformat:0|intcomma }} GNF</td>
+                    <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ produit.valeur_stock|floatformat:0|intcomma }} GNF</td>
+                    <td class="px-4 py-3">
+                        {% if produit.en_alerte %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Alerte</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">OK</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="px-4 py-10 text-center text-gray-400">Aucun produit disponible.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mt-6">
+    <div class="px-5 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+        <h2 class="text-lg font-semibold text-gray-900">Mouvements de stock recents</h2>
+        {% if date_debut or date_fin %}
+        <span class="text-sm text-gray-500">
+            {% if date_debut %}Du {{ date_debut }}{% endif %}
+            {% if date_fin %} au {{ date_fin }}{% endif %}
+        </span>
+        {% endif %}
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Produit</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Type</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Quantite</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Motif</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Utilisateur</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for mvt in mouvements %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 text-gray-500">{{ mvt.created_at|date:"d/m/Y H:i" }}</td>
+                    <td class="px-4 py-3 text-gray-900 font-medium">{{ mvt.produit.nom }}</td>
+                    <td class="px-4 py-3">
+                        {% if mvt.type_mvt == 'ENTREE' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{{ mvt.get_type_mvt_display }}</span>
+                        {% elif mvt.type_mvt == 'SORTIE' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">{{ mvt.get_type_mvt_display }}</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">{{ mvt.get_type_mvt_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-right font-semibold text-gray-800">{{ mvt.quantite|floatformat:"-3" }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ mvt.motif|default:"—" }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ mvt.utilisateur.username|default:"—" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-4 py-10 text-center text-gray-400">Aucun mouvement de stock enregistre.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+{{ graph_categories|json_script:"graph-categories" }}
+{{ graph_valeurs|json_script:"graph-valeurs" }}
+{{ graph_alertes_labels|json_script:"graph-alertes-labels" }}
+{{ graph_alertes_values|json_script:"graph-alertes-values" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+    const categories = JSON.parse(document.getElementById('graph-categories').textContent);
+    const valeurs = JSON.parse(document.getElementById('graph-valeurs').textContent);
+    const alertLabels = JSON.parse(document.getElementById('graph-alertes-labels').textContent);
+    const alertValues = JSON.parse(document.getElementById('graph-alertes-values').textContent);
+
+    new Chart(document.getElementById('stockCategorieChart'), {
+        type: 'bar',
+        data: {
+            labels: categories,
+            datasets: [{
+                label: 'Valeur (GNF)',
+                data: valeurs,
+                backgroundColor: '#3b82f6',
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: (v) => Math.round(v).toLocaleString('fr-FR')
+                    }
+                }
+            }
+        }
+    });
+
+    new Chart(document.getElementById('stockAlertChart'), {
+        type: 'doughnut',
+        data: {
+            labels: alertLabels,
+            datasets: [{
+                data: alertValues,
+                backgroundColor: ['#16a34a', '#dc2626'],
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+</script>
 {% endblock %}

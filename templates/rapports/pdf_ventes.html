@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; font-size: 12px; }
+        .header { text-align: center; border-bottom: 2px solid #1e40af; padding-bottom: 14px; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #1e40af; }
+        .meta { margin-bottom: 10px; color: #666; }
+        .kpis { margin: 12px 0 16px 0; }
+        .kpis p { margin: 4px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f3f4f6; border-bottom: 2px solid #1e40af; text-align: left; padding: 8px; }
+        td { border-bottom: 1px solid #e5e7eb; padding: 8px; }
+        .right { text-align: right; }
+        .footer { margin-top: 24px; font-size: 11px; color: #666; text-align: center; }
+    </style>
+</head>
+<body>
+    {% load humanize %}
+    <div class="header">
+        <h1>Rapport des Ventes</h1>
+        <p class="meta">
+            Periode: {{ date_debut|default:"Debut" }} - {{ date_fin|default:"Aujourd'hui" }}
+        </p>
+    </div>
+
+    <div class="kpis">
+        <p><strong>Montant total:</strong> {{ total_ventes|floatformat:0|intcomma }} GNF</p>
+        <p><strong>Montant encaisse:</strong> {{ total_paye|floatformat:0|intcomma }} GNF</p>
+        <p><strong>Reste a encaisser:</strong> {{ total_restant|floatformat:0|intcomma }} GNF</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Numero</th>
+                <th>Client</th>
+                <th>Date</th>
+                <th class="right">Montant</th>
+                <th class="right">Paye</th>
+                <th class="right">Reste</th>
+                <th>Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vente in ventes %}
+            <tr>
+                <td>{{ vente.numero }}</td>
+                <td>{{ vente.client.nom|default:"Anonyme" }}</td>
+                <td>{{ vente.date_vente|date:"d/m/Y" }}</td>
+                <td class="right">{{ vente.montant_total|floatformat:0|intcomma }}</td>
+                <td class="right">{{ vente.montant_paye|floatformat:0|intcomma }}</td>
+                <td class="right">{{ vente.solde_restant|floatformat:0|intcomma }}</td>
+                <td>{{ vente.get_statut_display }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7">Aucune vente dans la periode.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Genere le {% now "d/m/Y \a H:i" %}
+    </div>
+</body>
+</html>

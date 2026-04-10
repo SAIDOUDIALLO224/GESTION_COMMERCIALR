@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; font-size: 12px; }
+        .header { text-align: center; border-bottom: 2px solid #1e40af; padding-bottom: 14px; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #1e40af; }
+        .meta { margin: 4px 0; color: #555; font-size: 11px; }
+        .kpis { margin: 12px 0 16px 0; }
+        .kpis p { margin: 4px 0; }
+        .section-title { margin: 18px 0 8px 0; color: #1e40af; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f3f4f6; border-bottom: 2px solid #1e40af; text-align: left; padding: 8px; }
+        td { border-bottom: 1px solid #e5e7eb; padding: 8px; }
+        .right { text-align: right; }
+        .footer { margin-top: 24px; font-size: 11px; color: #666; text-align: center; }
+    </style>
+</head>
+<body>
+    {% load humanize %}
+    <div class="header">
+        <h1>Rapport de Stock</h1>
+        <p class="meta">
+            {% if date_debut or date_fin %}
+                Periode : {{ date_debut|default:"Debut" }} - {{ date_fin|default:"Aujourd'hui" }}
+            {% else %}
+                Toute la periode
+            {% endif %}
+        </p>
+        <p class="meta">Genere le {% now "d/m/Y \a H:i" %}</p>
+    </div>
+
+    <div class="kpis">
+        <p><strong>Valeur totale du stock:</strong> {{ total_stock_value|floatformat:0|intcomma }} GNF</p>
+        <p><strong>Nombre de produits:</strong> {{ nb_produits|intcomma }}</p>
+        <p><strong>Produits en alerte:</strong> {{ nb_alertes|intcomma }}</p>
+    </div>
+
+    <div class="section-title">Etat du stock</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th>Categorie</th>
+                <th class="right">Stock</th>
+                <th class="right">Seuil</th>
+                <th class="right">Valeur</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for produit in produits %}
+            <tr>
+                <td>{{ produit.nom }}</td>
+                <td>{{ produit.categorie.nom }}</td>
+                <td class="right">{{ produit.stock_actuel|floatformat:"-3" }} {{ produit.unite_mesure }}</td>
+                <td class="right">{{ produit.seuil_alerte|floatformat:"-3" }}</td>
+                <td class="right">{{ produit.valeur_stock|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="section-title">Mouvements recents</div>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Produit</th>
+                <th>Type</th>
+                <th class="right">Quantite</th>
+                <th>Motif</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mvt in mouvements %}
+            <tr>
+                <td>{{ mvt.created_at|date:"d/m/Y H:i" }}</td>
+                <td>{{ mvt.produit.nom }}</td>
+                <td>{{ mvt.get_type_mvt_display }}</td>
+                <td class="right">{{ mvt.quantite|floatformat:"-3" }}</td>
+                <td>{{ mvt.motif|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">Aucun mouvement enregistre.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Genere le {{ "now"|date:"d/m/Y H:i" }}
+    </div>
+</body>
+</html>

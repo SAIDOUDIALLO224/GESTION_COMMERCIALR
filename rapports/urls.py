@@ -7,5 +7,6 @@ urlpatterns = [
     path('', views.rapports_index, name='index'),
     path('ventes/', views.rapport_ventes, name='ventes'),
     path('stock/', views.rapport_stock, name='stock'),
-    path('export/excel/', views.export_excel_ventes, name='export_excel'),
+    path('export/pdf/ventes/', views.export_pdf_ventes, name='export_pdf_ventes'),
+    path('export/pdf/stock/', views.export_pdf_stock, name='export_pdf_stock'),
 ]
