@@ -55,6 +55,7 @@ def liste_clients(request):
 def detail_client(request, pk):
     client = get_object_or_404(Client, pk=pk)
     ventes = Vente.objects.filter(client=client).order_by('-date_vente')[:30]
+    ventes_a_encaisser = Vente.objects.filter(client=client, solde_restant__gt=0).order_by('-date_vente')
     paiements = Paiement.objects.filter(client=client).order_by('-date_paiement')[:30]
 
     total_ventes = ventes.aggregate(total=Sum('montant_total'))['total'] or 0
@@ -63,6 +64,7 @@ def detail_client(request, pk):
     context = {
         'client': client,
         'ventes': ventes,
+        'ventes_a_encaisser': ventes_a_encaisser,
         'paiements': paiements,
         'total_ventes': total_ventes,
         'total_paye': total_paye,

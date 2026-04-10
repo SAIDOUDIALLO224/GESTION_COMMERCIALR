@@ -42,6 +42,44 @@ class VenteForm(forms.Form):
     )
 
 
+class EncaissementForm(forms.Form):
+    montant = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'step': '0.01',
+            'min': '0.01'
+        }),
+        label='Montant a encaisser'
+    )
+    mode_paiement = forms.ChoiceField(
+        choices=Paiement.MODE_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
+        label='Mode de paiement'
+    )
+    reference = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'placeholder': 'Ex: Recu #125, virement BIC...'
+        }),
+        label='Reference'
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'rows': 3,
+            'placeholder': 'Notes optionnelles'
+        }),
+        label='Notes'
+    )
+
+
 @login_required
 def nouvelle_vente(request):
     if request.method == 'POST':
@@ -144,6 +182,57 @@ def detail_vente(request, pk):
         'paiements': paiements,
     }
     return render(request, 'ventes/detail.html', context)
+
+
+@login_required
+def encaisser_paiement(request, pk):
+    vente = get_object_or_404(Vente.objects.select_related('client'), pk=pk)
+
+    if not vente.client:
+        messages.error(request, 'Impossible d\'encaisser: cette vente est anonyme (sans client).')
+        return redirect('ventes:detail', pk=vente.pk)
+
+    if vente.solde_restant <= 0:
+        messages.info(request, 'Cette vente est deja soldee.')
+        return redirect('ventes:detail', pk=vente.pk)
+
+    if request.method == 'POST':
+        form = EncaissementForm(request.POST)
+        if form.is_valid():
+            montant = form.cleaned_data['montant']
+
+            if montant > vente.solde_restant:
+                form.add_error('montant', f"Le montant ne peut pas depasser le reste a payer ({vente.solde_restant} GNF).")
+            else:
+                with transaction.atomic():
+                    Paiement.objects.create(
+                        vente=vente,
+                        client=vente.client,
+                        montant=montant,
+                        mode_paiement=form.cleaned_data['mode_paiement'],
+                        reference=form.cleaned_data.get('reference', ''),
+                        notes=form.cleaned_data.get('notes', ''),
+                        utilisateur=request.user
+                    )
+
+                    vente.montant_paye += montant
+                    vente.solde_restant = max(Decimal('0'), vente.montant_total - vente.montant_paye)
+                    vente.statut = 'SOLDE' if vente.solde_restant == 0 else 'PARTIEL'
+                    vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+
+                    vente.client.solde_du = max(Decimal('0'), vente.client.solde_du - montant)
+                    vente.client.save(update_fields=['solde_du'])
+
+                messages.success(request, f'Paiement enregistre: {montant} GNF pour la vente {vente.numero}.')
+                return redirect('ventes:detail', pk=vente.pk)
+    else:
+        form = EncaissementForm(initial={'mode_paiement': 'ESPECES'})
+
+    context = {
+        'vente': vente,
+        'form': form,
+    }
+    return render(request, 'ventes/paiement.html', context)
 
 
 @login_required

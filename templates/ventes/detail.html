@@ -18,6 +18,12 @@
             <p class="text-sm text-gray-500 mt-1">{{ vente.date_vente|date:"d/m/Y H:i" }} {% if vente.client %}• {{ vente.client.nom }}{% else %}• Vente anonyme{% endif %}</p>
         </div>
         <div class="flex items-center gap-2">
+            {% if vente.client and vente.solde_restant > 0 %}
+            <a href="{% url 'ventes:encaisser' vente.pk %}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 9v1m-7-7h14"/></svg>
+                Encaisser
+            </a>
+            {% endif %}
             <a href="{% url 'factures:pdf' vente.pk %}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m0 0l3-3m-3 3l-3-3m9 4H6a2 2 0 01-2-2V7a2 2 0 012-2h3.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V17a2 2 0 01-2 2z"/></svg>
                 Facture PDF

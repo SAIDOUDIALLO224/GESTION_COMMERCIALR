@@ -1,84 +1,125 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Tableau de Bord - GesStock Madina{% endblock %}
 {% block page_title %}Tableau de Bord{% endblock %}
 
 {% block content %}
-<div class="grid">
-    <div class="stat-card">
-        <div class="stat-card-label">Chiffre d'Affaires (Aujourd'hui)</div>
-        <div class="stat-value">{{ ca_today|default:"0" }} GNF</div>
+<section class="relative overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-6 md:p-8 mb-6">
+    <div class="absolute -top-16 -right-16 w-52 h-52 bg-blue-200/35 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-cyan-200/30 rounded-full blur-3xl"></div>
+    <div class="relative">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+            <div>
+                <p class="text-xs uppercase tracking-[0.18em] font-semibold text-blue-700">Vue d'ensemble</p>
+                <h2 class="mt-1 text-2xl md:text-3xl font-bold text-gray-900">Performance de la journée</h2>
+                <p class="mt-2 text-sm text-gray-600">Suivez en temps réel vos ventes, encaissements et crédits en cours.</p>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <a href="{% url 'ventes:nouvelle' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">Nouvelle vente</a>
+                <a href="{% url 'clients:liste' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors">Clients</a>
+                <a href="{% url 'produits:liste' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors">Produits</a>
+                <a href="{% url 'rapports:index' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors">Rapports</a>
+            </div>
+        </div>
     </div>
-    
-    <div class="stat-card">
-        <div class="stat-card-label">Nombre de Ventes</div>
-        <div class="stat-value">{{ nb_ventes|default:"0" }}</div>
-    </div>
-    
-    <div class="stat-card">
-        <div class="stat-card-label">Montant Encaissé</div>
-        <div class="stat-value">{{ montant_encaisse|default:"0" }} GNF</div>
-    </div>
-    
-    <div class="stat-card">
-        <div class="stat-card-label">Crédits en Cours</div>
-        <div class="stat-value">{{ credits_en_cours|default:"0" }} GNF</div>
-    </div>
-</div>
+ </section>
 
-<div class="card" style="margin-top: 30px;">
-    <h2 style="margin-bottom: 20px;">⚠️ Produits en Alerte de Stock</h2>
-    {% if produits_alerte %}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Produit</th>
-                    <th>Stock Actuel</th>
-                    <th>Seuil</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for produit in produits_alerte %}
-                <tr>
-                    <td><strong>{{ produit.nom }}</strong></td>
-                    <td><span class="badge badge-danger">{{ produit.stock_actuel }}</span></td>
-                    <td>{{ produit.seuil_alerte }}</td>
-                    <td><a href="{% url 'produits:detail' produit.pk %}" class="btn btn-sm" style="background: #0284c7; color: white;">Voir</a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p style="text-align: center; color: #64748b; padding: 20px;">✓ Aucun produit en alerte</p>
-    {% endif %}
-</div>
+<section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+    <article class="bg-white rounded-xl border border-blue-200 shadow-sm p-5">
+        <p class="text-xs uppercase tracking-wide font-semibold text-blue-700">Chiffre d'affaires du jour</p>
+        <p class="mt-2 text-2xl font-bold text-gray-900">{{ ca_today|default:"0" }}</p>
+        <p class="text-xs text-blue-500 mt-1">GNF</p>
+    </article>
 
-<div class="card" style="margin-top: 30px;">
-    <h2 style="margin-bottom: 20px;">👥 Clients avec Dettes</h2>
-    {% if clients_dettes %}
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Client</th>
-                    <th>Téléphone</th>
-                    <th>Solde Dû</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for client in clients_dettes %}
-                <tr>
-                    <td><strong>{{ client.nom }}</strong></td>
-                    <td>{{ client.telephone }}</td>
-                    <td><span class="badge badge-danger">{{ client.solde_du }} GNF</span></td>
-                    <td><a href="{% url 'clients:detail' client.pk %}" class="btn btn-sm" style="background: #0284c7; color: white;">Voir</a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% else %}
-        <p style="text-align: center; color: #64748b; padding: 20px;">✓ Aucun client avec dettes</p>
-    {% endif %}
-</div>
+    <article class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <p class="text-xs uppercase tracking-wide font-semibold text-gray-500">Nombre de ventes</p>
+        <p class="mt-2 text-2xl font-bold text-gray-900">{{ nb_ventes|default:"0"|intcomma }}</p>
+        <p class="text-xs text-gray-400 mt-1">Aujourd'hui</p>
+    </article>
+
+    <article class="bg-white rounded-xl border border-green-200 shadow-sm p-5">
+        <p class="text-xs uppercase tracking-wide font-semibold text-green-700">Montant encaissé</p>
+        <p class="mt-2 text-2xl font-bold text-green-700">{{ montant_encaisse|default:"0" }}</p>
+        <p class="text-xs text-green-500 mt-1">GNF</p>
+    </article>
+
+    <article class="bg-white rounded-xl border border-red-200 shadow-sm p-5">
+        <p class="text-xs uppercase tracking-wide font-semibold text-red-700">Crédits en cours</p>
+        <p class="mt-2 text-2xl font-bold text-red-700">{{ credits_en_cours|default:"0" }}</p>
+        <p class="text-xs text-red-500 mt-1">GNF à recouvrer</p>
+    </article>
+</section>
+
+<section class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-red-50 to-white flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Produits en alerte de stock</h3>
+            <span class="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700 font-semibold">{{ produits_alerte|length }} alerte{{ produits_alerte|length|pluralize }}</span>
+        </div>
+        {% if produits_alerte %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-600">Produit</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-600">Stock</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-600">Seuil</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-600">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for produit in produits_alerte %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 font-medium text-gray-900">{{ produit.nom }}</td>
+                        <td class="px-4 py-3 text-right text-red-700 font-semibold">{{ produit.stock_actuel|floatformat:"-3" }}</td>
+                        <td class="px-4 py-3 text-right text-gray-600">{{ produit.seuil_alerte|floatformat:"-3" }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="{% url 'produits:detail' produit.pk %}" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">Voir</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="py-12 text-center text-gray-400 text-sm">Aucun produit en alerte.</div>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-white flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Clients avec dettes</h3>
+            <span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700 font-semibold">{{ clients_dettes|length }} client{{ clients_dettes|length|pluralize }}</span>
+        </div>
+        {% if clients_dettes %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-600">Client</th>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-600">Téléphone</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-600">Solde dû</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-600">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for client in clients_dettes %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 font-medium text-gray-900">{{ client.nom }}</td>
+                        <td class="px-4 py-3 text-gray-600">{{ client.telephone }}</td>
+                        <td class="px-4 py-3 text-right text-red-700 font-semibold">{{ client.solde_du|floatformat:0|intcomma }} GNF</td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="{% url 'clients:detail' client.pk %}" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">Ouvrir</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="py-12 text-center text-gray-400 text-sm">Aucun client avec dette.</div>
+        {% endif %}
+    </div>
+</section>
 {% endblock %}

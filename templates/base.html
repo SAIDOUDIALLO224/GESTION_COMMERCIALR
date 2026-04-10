@@ -22,60 +22,173 @@
 
     <div class="flex h-screen">
         <!-- Sidebar -->
-        <aside class="w-64 bg-gradient-to-b from-blue-900 to-blue-800 text-white p-6 fixed h-screen overflow-y-auto shadow-lg">
-            <h1 class="text-2xl font-bold mb-8 flex items-center gap-2">
-                <span class="text-2xl">🏪</span> GesStock
-            </h1>
-            <nav class="space-y-2">
-                <a href="/" class="block px-4 py-3 rounded-lg transition-colors {% if request.resolver_match.url_name == 'dashboard' %}bg-white bg-opacity-20 font-semibold{% else %}hover:bg-white hover:bg-opacity-10{% endif %}" hx-boost="true">
-                    📊 Tableau de bord
-                </a>
-                <a href="/produits/" class="block px-4 py-3 rounded-lg transition-colors {% if 'produits' in request.path %}bg-white bg-opacity-20 font-semibold{% else %}hover:bg-white hover:bg-opacity-10{% endif %}" hx-boost="true">
-                    📦 Produits
-                </a>
-                <a href="/stock/" class="block px-4 py-3 rounded-lg transition-colors {% if 'stock' in request.path %}bg-white bg-opacity-20 font-semibold{% else %}hover:bg-white hover:bg-opacity-10{% endif %}" hx-boost="true">
-                    📈 Stock
-                </a>
-                <a href="/clients/" class="block px-4 py-3 rounded-lg transition-colors {% if 'clients' in request.path %}bg-white bg-opacity-20 font-semibold{% else %}hover:bg-white hover:bg-opacity-10{% endif %}" hx-boost="true">
-                    👥 Clients
-                </a>
-                <a href="/ventes/" class="block px-4 py-3 rounded-lg transition-colors {% if 'ventes' in request.path %}bg-white bg-opacity-20 font-semibold{% else %}hover:bg-white hover:bg-opacity-10{% endif %}" hx-boost="true">
-                    💰 Ventes
-                </a>
-                <a href="/factures/" class="block px-4 py-3 rounded-lg transition-colors {% if 'factures' in request.path %}bg-white bg-opacity-20 font-semibold{% else %}hover:bg-white hover:bg-opacity-10{% endif %}" hx-boost="true">
-                    📄 Factures
-                </a>
-                <a href="/rapports/" class="block px-4 py-3 rounded-lg transition-colors {% if 'rapports' in request.path %}bg-white bg-opacity-20 font-semibold{% else %}hover:bg-white hover:bg-opacity-10{% endif %}" hx-boost="true">
-                    � Rapports
-                </a>
-                <a href="/admin/" class="block px-4 py-3 rounded-lg transition-colors hover:bg-white hover:bg-opacity-10" target="_blank">
-                    ⚙️ Admin
-                </a>
-                <div class="mt-8 pt-8 border-t border-white border-opacity-20">
-                    <a href="/logout/" class="block px-4 py-3 rounded-lg transition-colors hover:bg-red-600 hover:bg-opacity-50">
-                        🚪 Déconnexion
-                    </a>
+        <aside class="w-64 bg-gradient-to-b from-[#0f2460] via-[#1a3580] to-[#1e40af] text-white flex flex-col fixed h-screen overflow-y-auto shadow-xl">
+
+            <!-- Logo -->
+            <div class="px-5 py-5 border-b border-white/10">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-white">
+                            <path d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"/>
+                        </svg>
+                    </div>
+                    <div class="leading-tight">
+                        <p class="text-base font-bold text-white">GesStock</p>
+                        <p class="text-[11px] text-blue-200 font-medium">Madina</p>
+                    </div>
                 </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 px-3 py-4 space-y-0.5">
+
+                <p class="px-3 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-widest text-blue-300/70">Principal</p>
+
+                <a href="/" hx-boost="true"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                          {% if request.resolver_match.url_name == 'dashboard' %}bg-white/20 text-white{% else %}text-blue-100 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-[18px] shrink-0">
+                        <path fill-rule="evenodd" d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 17 11h-1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6H3a1 1 0 0 1-.707-1.707l7-7Z" clip-rule="evenodd"/>
+                    </svg>
+                    Tableau de bord
+                </a>
+
+                <p class="px-3 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-widest text-blue-300/70">Inventaire</p>
+
+                <a href="/produits/" hx-boost="true"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                          {% if 'produits' in request.path %}bg-white/20 text-white{% else %}text-blue-100 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-[18px] shrink-0">
+                        <path d="M2 3a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H2ZM2 9a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1v-1a1 1 0 0 0-1-1H2ZM1 15a1 1 0 0 1 1-1h16a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-1Z"/>
+                    </svg>
+                    Produits
+                </a>
+
+                <a href="/stock/" hx-boost="true"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                          {% if 'stock' in request.path %}bg-white/20 text-white{% else %}text-blue-100 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-[18px] shrink-0">
+                        <path d="M5.127 3.502 5.25 3.5h9.5c.041 0 .082 0 .123.002A2.251 2.251 0 0 0 12.75 2h-5.5a2.25 2.25 0 0 0-2.123 1.502ZM1 10.25A2.25 2.25 0 0 1 3.25 8h13.5A2.25 2.25 0 0 1 19 10.25v5.5A2.25 2.25 0 0 1 16.75 18H3.25A2.25 2.25 0 0 1 1 15.75v-5.5ZM3.25 6.5c-.04 0-.082 0-.123.002A2.25 2.25 0 0 1 5.25 5h9.5a2.25 2.25 0 0 1 2.123 1.502A3.819 3.819 0 0 0 16.75 6.5H3.25Z"/>
+                    </svg>
+                    Stock
+                </a>
+
+                <p class="px-3 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-widest text-blue-300/70">Commerce</p>
+
+                <a href="/clients/" hx-boost="true"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                          {% if 'clients' in request.path %}bg-white/20 text-white{% else %}text-blue-100 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-[18px] shrink-0">
+                        <path d="M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM14.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM1.615 16.428a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 7 18a9.953 9.953 0 0 1-5.385-1.572ZM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 0 0-1.588-3.755 4.502 4.502 0 0 1 5.874 2.636.818.818 0 0 1-.36.98A7.465 7.465 0 0 1 14.5 16Z"/>
+                    </svg>
+                    Clients
+                </a>
+
+                <a href="/ventes/" hx-boost="true"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                          {% if 'ventes' in request.path %}bg-white/20 text-white{% else %}text-blue-100 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-[18px] shrink-0">
+                        <path fill-rule="evenodd" d="M1 2.75A.75.75 0 0 1 1.75 2h16.5a.75.75 0 0 1 0 1.5H18v8.75A2.75 2.75 0 0 1 15.25 15h-1.072l.798 3.06a.75.75 0 0 1-1.452.38L13.41 18H6.59l-.114.44a.75.75 0 0 1-1.452-.38L5.823 15H4.75A2.75 2.75 0 0 1 2 12.25V3.5h-.25A.75.75 0 0 1 1 2.75ZM7.373 15l-.391 1.5h6.037l-.392-1.5H7.373Z" clip-rule="evenodd"/>
+                    </svg>
+                    Ventes
+                </a>
+
+                <a href="/factures/" hx-boost="true"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                          {% if 'factures' in request.path %}bg-white/20 text-white{% else %}text-blue-100 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-[18px] shrink-0">
+                        <path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 0 0 3 3.5v13A1.5 1.5 0 0 0 4.5 18h11a1.5 1.5 0 0 0 1.5-1.5V7.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.122A1.5 1.5 0 0 0 11.378 2H4.5ZM10 8a.75.75 0 0 1 .75.75v1.5h1.5a.75.75 0 0 1 0 1.5h-1.5v1.5a.75.75 0 0 1-1.5 0v-1.5h-1.5a.75.75 0 0 1 0-1.5h1.5v-1.5A.75.75 0 0 1 10 8Z" clip-rule="evenodd"/>
+                    </svg>
+                    Factures
+                </a>
+
+                <p class="px-3 pt-4 pb-2 text-[10px] font-semibold uppercase tracking-widest text-blue-300/70">Analyse</p>
+
+                <a href="/rapports/" hx-boost="true"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                          {% if 'rapports' in request.path %}bg-white/20 text-white{% else %}text-blue-100 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-[18px] shrink-0">
+                        <path d="M15.5 2A1.5 1.5 0 0 0 14 3.5v13a1.5 1.5 0 0 0 3 0v-13A1.5 1.5 0 0 0 15.5 2ZM9.5 6A1.5 1.5 0 0 0 8 7.5v9a1.5 1.5 0 0 0 3 0v-9A1.5 1.5 0 0 0 9.5 6ZM3.5 10A1.5 1.5 0 0 0 2 11.5v5a1.5 1.5 0 0 0 3 0v-5A1.5 1.5 0 0 0 3.5 10Z"/>
+                    </svg>
+                    Rapports
+                </a>
+
+                <a href="/admin/" target="_blank"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 text-blue-100 hover:bg-white/10 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-[18px] shrink-0">
+                        <path fill-rule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .205 1.251l-1.18 2.044a1 1 0 0 1-1.186.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.205-1.251l1.18-2.044a1 1 0 0 1 1.186-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652Z" clip-rule="evenodd"/>
+                        <path fill-rule="evenodd" d="M10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clip-rule="evenodd"/>
+                    </svg>
+                    Administration
+                </a>
             </nav>
+
+            <!-- User + deconnexion -->
+            <div class="px-3 pb-4 pt-2 border-t border-white/10">
+                <div class="flex items-center gap-3 px-3 py-2 mb-1">
+                    <div class="w-8 h-8 rounded-full bg-blue-400/30 flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-blue-200">
+                            <path d="M10 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM3.465 14.493a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 7 18a9.953 9.953 0 0 1-5.385-1.572Z"/>
+                        </svg>
+                    </div>
+                    <div class="leading-tight min-w-0">
+                        <p class="text-sm font-semibold text-white truncate">{{ user.first_name|default:user.username }}</p>
+                        <p class="text-[11px] text-blue-300 truncate">
+                            {% if user.profilutilisateur.role == 'GERANT' %}G&eacute;rant{% else %}Employ&eacute;{% endif %}
+                        </p>
+                    </div>
+                </div>
+                <a href="/logout/"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-blue-200 hover:bg-red-500/20 hover:text-red-200 transition-all duration-150">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-[18px] shrink-0">
+                        <path fill-rule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clip-rule="evenodd"/>
+                        <path fill-rule="evenodd" d="M19 10a.75.75 0 0 0-.75-.75H8.704l1.048-1.08a.75.75 0 1 0-1.04-1.08l-2.5 2.571a.75.75 0 0 0 0 1.037l2.5 2.572a.75.75 0 1 0 1.04-1.08L8.704 10.75H18.25A.75.75 0 0 0 19 10Z" clip-rule="evenodd"/>
+                    </svg>
+                    D&eacute;connexion
+                </a>
+            </div>
         </aside>
 
         <!-- Main Content -->
         <main class="flex-1 ml-64 overflow-auto">
             <!-- Header -->
-            <div class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
-                <div class="px-8 py-6 flex justify-between items-center">
-                    <h1 class="text-3xl font-bold text-gray-900">{% block page_title %}Tableau de bord{% endblock %}</h1>
-                    <div class="flex items-center gap-4">
-                        <span class="text-sm text-gray-600">👤 <strong>{{ user.first_name|default:user.username }}</strong></span>
+            <div class="bg-white/95 backdrop-blur border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+                <div class="px-8 py-4 flex items-center justify-between gap-4">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                                    <path fill-rule="evenodd" d="M9.69 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.706-9.29a1 1 0 0 0-1.414-1.42L8.983 10.28 7.71 9.01A1 1 0 0 0 6.29 10.42l1.98 1.99a1 1 0 0 0 1.41 0l3.716-3.7Z" clip-rule="evenodd"/>
+                                </svg>
+                            </span>
+                            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 truncate">{% block page_title %}Tableau de bord{% endblock %}</h1>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Pilotage en temps reel de votre activite GesStock</p>
+                    </div>
+
+                    <div class="flex items-center gap-3 shrink-0">
+                        <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-gray-500">
+                                <path fill-rule="evenodd" d="M5.75 3a.75.75 0 0 0 0 1.5h8.5a.75.75 0 0 0 0-1.5h-8.5ZM4 8.25A2.25 2.25 0 0 1 6.25 6h7.5A2.25 2.25 0 0 1 16 8.25v5.5A2.25 2.25 0 0 1 13.75 16h-7.5A2.25 2.25 0 0 1 4 13.75v-5.5Z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>{% now "d/m/Y" %}</span>
+                        </div>
+
                         {% if user.profilutilisateur.role == 'GERANT' %}
-                        <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
-                            Gérant
-                        </span>
+                        <span class="px-3 py-1.5 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">Gérant</span>
                         {% else %}
-                        <span class="px-3 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-full">
-                            Employé
-                        </span>
+                        <span class="px-3 py-1.5 bg-gray-100 text-gray-800 text-xs font-semibold rounded-full">Employé</span>
                         {% endif %}
+
+                        <div class="hidden sm:flex items-center gap-2 pl-2 border-l border-gray-200">
+                            <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold">
+                                {{ user.username|first|upper }}
+                            </div>
+                            <div class="leading-tight">
+                                <p class="text-sm font-semibold text-gray-800">{{ user.first_name|default:user.username }}</p>
+                                <p class="text-xs text-gray-500">Connecte</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
