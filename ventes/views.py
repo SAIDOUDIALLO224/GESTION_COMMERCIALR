@@ -2,12 +2,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Sum
+from django.core.paginator import Paginator
 from .models import Vente, LigneVente
 from produits.models import Produit
 from clients.models import Client
 from paiements.models import Paiement
 from django import forms
+from decimal import Decimal
 import uuid
 
 
@@ -15,19 +17,27 @@ class VenteForm(forms.Form):
     client = forms.ModelChoiceField(
         queryset=Client.objects.all(),
         required=False,
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
         label='Client (optionnel)'
     )
     mode_paiement = forms.ChoiceField(
         choices=Paiement.MODE_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
         label='Mode de paiement'
     )
     montant_paye = forms.DecimalField(
         max_digits=14,
         decimal_places=2,
         required=False,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'step': '0.01',
+            'min': '0'
+        }),
         label='Montant payé'
     )
 
@@ -50,13 +60,13 @@ def nouvelle_vente(request):
                 produits_ids = request.POST.getlist('produit_id')
                 quantites = request.POST.getlist('quantite')
                 
-                montant_total = 0
+                montant_total = Decimal('0')
                 for produit_id, quantite in zip(produits_ids, quantites):
                     if not produit_id or not quantite:
                         continue
                     
                     produit = Produit.objects.get(pk=produit_id)
-                    quantite = float(quantite)
+                    quantite = Decimal(quantite)
                     
                     # Vérifier le stock
                     if produit.stock_actuel < quantite:
@@ -81,7 +91,7 @@ def nouvelle_vente(request):
                 
                 # Mettre à jour la vente
                 vente.montant_total = montant_total
-                montant_paye = form.cleaned_data.get('montant_paye') or 0
+                montant_paye = form.cleaned_data.get('montant_paye') or Decimal('0')
                 vente.montant_paye = montant_paye
                 vente.solde_restant = montant_total - montant_paye
                 
@@ -114,7 +124,7 @@ def nouvelle_vente(request):
     else:
         form = VenteForm()
     
-    produits = Produit.objects.filter(actif=True)
+    produits = Produit.objects.filter(actif=True).order_by('nom')
     context = {
         'form': form,
         'produits': produits,
@@ -124,7 +134,7 @@ def nouvelle_vente(request):
 
 @login_required
 def detail_vente(request, pk):
-    vente = get_object_or_404(Vente, pk=pk)
+    vente = get_object_or_404(Vente.objects.select_related('client', 'utilisateur'), pk=pk)
     lignes = vente.lignes.all()
     paiements = vente.paiements.all()
     
@@ -139,13 +149,25 @@ def detail_vente(request, pk):
 @login_required
 def liste_ventes(request):
     search = request.GET.get('search', '')
-    ventes = Vente.objects.all().order_by('-date_vente')
+    ventes = Vente.objects.select_related('client').all().order_by('-date_vente')
     
     if search:
         ventes = ventes.filter(Q(numero__icontains=search) | Q(client__nom__icontains=search))
+
+    paginator = Paginator(ventes, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    total_ventes = Vente.objects.count()
+    total_montant = Vente.objects.aggregate(total=Sum('montant_total'))['total'] or 0
+    total_restant = Vente.objects.aggregate(total=Sum('solde_restant'))['total'] or 0
     
     context = {
-        'ventes': ventes,
+        'ventes': page_obj.object_list,
+        'page_obj': page_obj,
         'search': search,
+        'total_ventes': total_ventes,
+        'total_montant': total_montant,
+        'total_restant': total_restant,
     }
     return render(request, 'ventes/liste.html', context)

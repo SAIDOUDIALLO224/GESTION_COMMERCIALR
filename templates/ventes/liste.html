@@ -1,47 +1,113 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Ventes - GesStock Madina{% endblock %}
-{% block page_title %}Gestion des Ventes{% endblock %}
+{% block page_title %}Ventes{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>Liste des Ventes</h2>
-        <a href="{% url 'ventes:nouvelle' %}" class="btn btn-primary">+ Nouvelle Vente</a>
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Gestion des ventes</h1>
+        <p class="text-sm text-gray-500 mt-1">Suivi des transactions, paiements et soldes restants.</p>
+    </div>
+    <a href="{% url 'ventes:nouvelle' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Nouvelle vente
+    </a>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-gray-500">Nombre de ventes</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900">{{ total_ventes|intcomma }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-blue-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-blue-700">Montant total</p>
+        <p class="mt-1 text-2xl font-bold text-blue-700">{{ total_montant|intcomma }}</p>
+        <p class="text-xs text-blue-500">GNF</p>
+    </div>
+    <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-red-700">Solde restant global</p>
+        <p class="mt-1 text-2xl font-bold text-red-700">{{ total_restant|intcomma }}</p>
+        <p class="text-xs text-red-500">GNF</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
+    <form method="get" class="flex gap-2">
+        <input type="text" name="search" value="{{ search }}" placeholder="Rechercher par numéro ou client..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button type="submit" class="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-colors">Rechercher</button>
+    </form>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    {% if ventes %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Numéro</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Client</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Montant</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Payé</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Statut</th>
+                    <th class="px-4 py-3 text-center font-semibold text-gray-600">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for vente in ventes %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 font-mono font-semibold text-blue-700">{{ vente.numero }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ vente.client.nom|default:"Vente anonyme" }}</td>
+                    <td class="px-4 py-3 text-gray-500">{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
+                    <td class="px-4 py-3 text-right text-gray-900">{{ vente.montant_total|intcomma }} GNF</td>
+                    <td class="px-4 py-3 text-right text-green-700 font-semibold">{{ vente.montant_paye|intcomma }} GNF</td>
+                    <td class="px-4 py-3">
+                        {% if vente.statut == 'SOLDE' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{{ vente.get_statut_display }}</span>
+                        {% elif vente.statut == 'PARTIEL' %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{{ vente.get_statut_display }}</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">{{ vente.get_statut_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            <a href="{% url 'ventes:detail' vente.pk %}" class="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors" title="Voir">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            </a>
+                            <a href="{% url 'factures:pdf' vente.pk %}" class="p-1.5 rounded text-green-600 hover:bg-green-50 transition-colors" title="PDF">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m0 0l3-3m-3 3l-3-3m9 4H6a2 2 0 01-2-2V7a2 2 0 012-2h3.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V17a2 2 0 01-2 2z"/></svg>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
-    {% if ventes %}
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Numéro</th>
-                <th>Client</th>
-                <th>Date</th>
-                <th>Montant</th>
-                <th>Payé</th>
-                <th>Statut</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for vente in ventes %}
-            <tr>
-                <td><strong>{{ vente.numero }}</strong></td>
-                <td>{{ vente.client.nom|default:"Vente anonyme" }}</td>
-                <td>{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
-                <td>{{ vente.montant_total }} GNF</td>
-                <td>{{ vente.montant_paye }} GNF</td>
-                <td><span class="badge badge-{% if vente.statut == 'SOLDE' %}success{% else %}warning{% endif %}">{{ vente.get_statut_display }}</span></td>
-                <td>
-                    <a href="{% url 'ventes:detail' vente.pk %}" class="btn btn-sm" style="background: #0284c7; color: white;">Voir</a>
-                    <a href="{% url 'factures:pdf' vente.pk %}" class="btn btn-sm" style="background: #16a34a; color: white;">PDF</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-white">
+        <p class="text-sm text-gray-600">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</p>
+        <div class="flex gap-1">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&search={{ search }}" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50">Préc.</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&search={{ search }}" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50">Suiv.</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     {% else %}
-    <p style="text-align: center; color: #64748b; padding: 40px;">Aucune vente enregistrée.</p>
+    <div class="py-16 text-center text-gray-400">
+        <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 14l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 5.04A12.02 12.02 0 003 9c0 5.523 3.977 10.11 9 11 5.023-.89 9-5.477 9-11 0-.345-.015-.687-.044-1.016z"/></svg>
+        <p class="font-medium">Aucune vente enregistrée</p>
+        <p class="text-sm mt-1">Créez votre première vente pour commencer.</p>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

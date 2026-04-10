@@ -1,58 +1,113 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}Clients - GesStock Madina{% endblock %}
-{% block page_title %}Gestion des Clients{% endblock %}
+{% block page_title %}Clients{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>Liste des Clients</h2>
-        <a href="{% url 'clients:creer' %}" class="btn btn-primary">+ Nouveau Client</a>
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Portefeuille clients</h1>
+        <p class="text-sm text-gray-500 mt-1">Suivi des profils, soldes et historiques d'achat.</p>
+    </div>
+    <a href="{% url 'clients:creer' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Nouveau client
+    </a>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-gray-500">Total clients</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900">{{ total_clients|intcomma }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-green-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-green-700">Clients actifs</p>
+        <p class="mt-1 text-2xl font-bold text-green-700">{{ clients_actifs|intcomma }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-red-700">Solde total dû</p>
+        <p class="mt-1 text-2xl font-bold text-red-700">{{ total_solde_du|intcomma }}</p>
+        <p class="text-xs text-red-500">GNF</p>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
+    <form method="get" class="flex gap-2">
+        <input type="text" name="search" value="{{ search }}" placeholder="Rechercher par nom ou téléphone..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button type="submit" class="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-colors">Rechercher</button>
+    </form>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    {% if clients %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Client</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Téléphone</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Type</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Quartier</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Solde dû</th>
+                    <th class="px-4 py-3 text-center font-semibold text-gray-600">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for client in clients %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3">
+                        <p class="font-medium text-gray-900">{{ client.nom }}</p>
+                        <p class="text-xs text-gray-500 mt-0.5">Créé le {{ client.created_at|date:"d/m/Y" }}</p>
+                    </td>
+                    <td class="px-4 py-3 text-gray-700">{{ client.telephone }}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">{{ client.get_type_client_display }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-600">{{ client.quartier|default:"—" }}</td>
+                    <td class="px-4 py-3 text-right">
+                        {% if client.solde_du > 0 %}
+                            <span class="font-semibold text-red-700">{{ client.solde_du|intcomma }} GNF</span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Soldé</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            <a href="{% url 'clients:detail' client.pk %}" class="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors" title="Voir">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            </a>
+                            <a href="{% url 'clients:modifier' client.pk %}" class="p-1.5 rounded text-orange-500 hover:bg-orange-50 transition-colors" title="Modifier">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
-    <form method="get" style="margin-bottom: 20px;">
-        <div style="display: flex; gap: 10px;">
-            <input type="text" name="search" value="{{ search }}" placeholder="Rechercher par nom ou téléphone..." class="form-control" style="flex: 1;">
-            <button type="submit" class="btn btn-primary">Rechercher</button>
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-white">
+        <p class="text-sm text-gray-600">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</p>
+        <div class="flex gap-1">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&search={{ search }}" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50">Préc.</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&search={{ search }}" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50">Suiv.</a>
+            {% endif %}
         </div>
-    </form>
+    </div>
+    {% endif %}
 
-    {% if clients %}
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Nom</th>
-                <th>Téléphone</th>
-                <th>Type</th>
-                <th>Quartier</th>
-                <th>Solde Dû</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for client in clients %}
-            <tr>
-                <td><strong>{{ client.nom }}</strong></td>
-                <td>{{ client.telephone }}</td>
-                <td>{{ client.get_type_client_display }}</td>
-                <td>{{ client.quartier }}</td>
-                <td>
-                    {% if client.solde_du > 0 %}
-                        <span class="badge badge-danger">{{ client.solde_du }} GNF</span>
-                    {% else %}
-                        <span class="badge badge-success">✓ Soldé</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{% url 'clients:detail' client.pk %}" class="btn btn-sm" style="background: #0284c7; color: white;">Voir</a>
-                    <a href="{% url 'clients:modifier' client.pk %}" class="btn btn-sm" style="background: #ea580c; color: white;">Éditer</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
     {% else %}
-    <p style="text-align: center; color: #64748b; padding: 40px;">Aucun client trouvé.</p>
+    <div class="py-16 text-center text-gray-400">
+        <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5V4H2v16h5m10 0v-2a4 4 0 00-4-4H9a4 4 0 00-4 4v2m10 0H7m5-12a4 4 0 110 8 4 4 0 010-8z"/></svg>
+        <p class="font-medium">Aucun client trouvé</p>
+        <p class="text-sm mt-1">Changez le filtre ou créez un nouveau client.</p>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

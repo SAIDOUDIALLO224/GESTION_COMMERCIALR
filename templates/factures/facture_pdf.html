@@ -15,10 +15,15 @@
         .total-section { text-align: right; margin-top: 20px; }
         .total-section p { margin: 5px 0; font-size: 14px; }
         .total-section .grand-total { font-size: 18px; font-weight: bold; color: #1e40af; }
+        .signatures { margin-top: 50px; display: table; width: 100%; table-layout: fixed; }
+        .signature-col { display: table-cell; width: 33.33%; text-align: center; vertical-align: top; padding: 0 10px; }
+        .signature-title { font-size: 12px; font-weight: bold; color: #1e40af; margin-bottom: 60px; }
+        .signature-line { border-top: 1px solid #888; padding-top: 6px; font-size: 11px; color: #444; }
         .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; text-align: center; color: #666; }
     </style>
 </head>
 <body>
+    {% load humanize l10n %}
     <div class="header">
         <h1>FACTURE</h1>
         <p>{{ magasin }}</p>
@@ -54,18 +59,33 @@
             {% for ligne in lignes %}
             <tr>
                 <td>{{ ligne.produit.nom }}</td>
-                <td style="text-align: right;">{{ ligne.quantite }}</td>
-                <td style="text-align: right;">{{ ligne.prix_unitaire }} GNF</td>
-                <td style="text-align: right;">{{ ligne.sous_total }} GNF</td>
+                <td style="text-align: right;">{{ ligne.quantite|floatformat:"-3"|localize }}</td>
+                <td style="text-align: right;">{{ ligne.prix_unitaire|floatformat:0|intcomma }} GNF</td>
+                <td style="text-align: right;">{{ ligne.sous_total|floatformat:0|intcomma }} GNF</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
     <div class="total-section">
-        <p><strong>Montant Total:</strong> {{ vente.montant_total }} GNF</p>
-        <p><strong>Montant Payé:</strong> {{ vente.montant_paye }} GNF</p>
-        <p class="grand-total">Solde Restant: {{ vente.solde_restant }} GNF</p>
+        <p><strong>Montant Total:</strong> {{ vente.montant_total|floatformat:0|intcomma }} GNF</p>
+        <p><strong>Montant Payé:</strong> {{ vente.montant_paye|floatformat:0|intcomma }} GNF</p>
+        <p class="grand-total">Solde Restant: {{ vente.solde_restant|floatformat:0|intcomma }} GNF</p>
+    </div>
+
+    <div class="signatures">
+        <div class="signature-col">
+            <div class="signature-title">Responsable Informatique</div>
+            <div class="signature-line">Signature</div>
+        </div>
+        <div class="signature-col">
+            <div class="signature-title">Client</div>
+            <div class="signature-line">Signature</div>
+        </div>
+        <div class="signature-col">
+            <div class="signature-title">PDG</div>
+            <div class="signature-line">M Oumar Baïlo Diallo</div>
+        </div>
     </div>
 
     <div class="footer">

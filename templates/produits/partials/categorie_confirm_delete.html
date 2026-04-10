@@ -1,0 +1,33 @@
+<tr id="cat-row-{{ categorie.pk }}" class="bg-red-50">
+  <td colspan="4" class="px-4 py-3">
+    <div class="flex items-center justify-between">
+      <span class="text-sm text-red-700">
+        Supprimer <strong>«{{ categorie.nom }}»</strong>
+        {% if categorie.produit_set.count %}
+          — <span class="text-red-600 font-semibold">{{ categorie.produit_set.count }} produit{{ categorie.produit_set.count|pluralize }} rattaché{{ categorie.produit_set.count|pluralize }}</span>, suppression impossible.
+        {% else %}
+          — Confirmer ?
+        {% endif %}
+      </span>
+      <div class="flex gap-2">
+        {% if not categorie.produit_set.count %}
+        <button
+          hx-post="{% url 'produits:categorie_supprimer' categorie.pk %}"
+          hx-target="#categories-panel"
+          hx-swap="outerHTML"
+          class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors">
+          Oui, supprimer
+        </button>
+        {% endif %}
+        <button
+          hx-get="{% url 'produits:categorie_creer' %}"
+          hx-target="#cat-form-zone"
+          hx-swap="outerHTML"
+          onclick="this.closest('tr').remove()"
+          class="px-3 py-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-medium rounded-lg transition-colors">
+          Annuler
+        </button>
+      </div>
+    </div>
+  </td>
+</tr>

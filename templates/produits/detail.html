@@ -1,52 +1,142 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}{{ produit.nom }} - GesStock Madina{% endblock %}
-{% block page_title %}Détail du Produit{% endblock %}
+{% block page_title %}Détail produit{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: start;">
-        <div>
-            <h2>{{ produit.nom }}</h2>
-            <p style="color: #64748b; margin-top: 5px;">Code: <strong>{{ produit.code }}</strong></p>
+<!-- Breadcrumb -->
+<nav class="flex items-center gap-1.5 text-sm text-gray-500 mb-6">
+  <a href="{% url 'produits:liste' %}" class="hover:text-blue-600">Produits</a>
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+  <span class="text-gray-900 font-medium">{{ produit.nom }}</span>
+</nav>
+
+<!-- Top card -->
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+  <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+    <div class="flex items-start gap-4">
+      {% if produit.photo %}
+        <img src="{{ produit.photo.url }}" alt="{{ produit.nom }}"
+             class="w-20 h-20 rounded-lg object-cover border border-gray-200 flex-shrink-0">
+      {% else %}
+        <div class="w-20 h-20 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0">
+          <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
         </div>
-        <div>
-            <a href="{% url 'produits:modifier' produit.pk %}" class="btn btn-primary">✏️ Modifier</a>
-            <a href="{% url 'produits:liste' %}" class="btn btn-secondary">← Retour</a>
+      {% endif %}
+      <div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 class="text-xl font-bold text-gray-900">{{ produit.nom }}</h1>
+          {% if not produit.actif %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Inactif</span>
+          {% elif produit.en_alerte %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+              <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+              Stock bas
+            </span>
+          {% else %}
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">En stock</span>
+          {% endif %}
         </div>
+        <p class="text-sm text-gray-500 mt-1">Code : <span class="font-mono font-semibold text-blue-700">{{ produit.code }}</span></p>
+        <p class="text-sm text-gray-500">Catégorie : <span class="font-medium text-gray-700">{{ produit.categorie.nom|default:"—" }}</span></p>
+      </div>
     </div>
-    
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
-        <div>
-            <h3 style="margin-bottom: 15px; color: #1e293b;">Informations</h3>
-            <p><strong>Catégorie:</strong> {{ produit.categorie.nom }}</p>
-            <p><strong>Unité:</strong> {{ produit.unite_mesure }}</p>
-            <p><strong>Actif:</strong> {% if produit.actif %}✓ Oui{% else %}✗ Non{% endif %}</p>
-        </div>
-        
-        <div>
-            <h3 style="margin-bottom: 15px; color: #1e293b;">Tarification</h3>
-            <p><strong>Prix d'achat:</strong> {{ produit.prix_achat }} GNF</p>
-            <p><strong>Prix vente gros:</strong> {{ produit.prix_vente_gros }} GNF</p>
-            <p><strong>Prix vente détail:</strong> {{ produit.prix_vente_detail }} GNF</p>
-            <p><strong>Marge:</strong> {{ produit.pourcentage_marge|floatformat:1 }}%</p>
-        </div>
+    <div class="flex items-center gap-2 flex-shrink-0">
+      {% if request.user.is_superuser or request.user.profilutilisateur.role == 'GERANT' %}
+      <a href="{% url 'produits:modifier' produit.pk %}"
+         class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        Modifier
+      </a>
+      <form method="post" action="{% url 'produits:supprimer' produit.pk %}"
+            onsubmit="return confirm('Supprimer «{{ produit.nom }}» ? Cette action est irréversible.')">
+        {% csrf_token %}
+        <button type="submit"
+                class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          Supprimer
+        </button>
+      </form>
+      {% endif %}
+      <a href="{% url 'produits:liste' %}"
+         class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors">
+        ← Retour
+      </a>
     </div>
-    
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
-        <div class="stat-card">
-            <div class="stat-card-label">Stock Actuel</div>
-            <div class="stat-value">{{ produit.stock_actuel }}</div>
-            <div style="font-size: 12px; color: #64748b;">{{ produit.unite_mesure }}</div>
-        </div>
-        
-        <div class="stat-card">
-            <div class="stat-card-label">Seuil d'Alerte</div>
-            <div class="stat-value">{{ produit.seuil_alerte }}</div>
-            {% if produit.en_alerte %}
-                <div style="color: #dc2626; font-weight: 600; margin-top: 10px;">⚠️ ALERTE STOCK</div>
-            {% endif %}
-        </div>
-    </div>
+  </div>
+</div>
+
+<!-- Stats row -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Stock actuel</p>
+    <p class="mt-1 text-2xl font-bold {% if produit.en_alerte %}text-red-600{% else %}text-gray-900{% endif %}">
+      {{ produit.stock_actuel|floatformat:"-3" }}
+    </p>
+    <p class="text-xs text-gray-400">{{ produit.unite_mesure }}</p>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Seuil d'alerte</p>
+    <p class="mt-1 text-2xl font-bold text-gray-900">{{ produit.seuil_alerte|floatformat:"-3" }}</p>
+    <p class="text-xs text-gray-400">{{ produit.unite_mesure }}</p>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Marge brute</p>
+    <p class="mt-1 text-2xl font-bold text-gray-900">{{ produit.marge_brute|intcomma }}</p>
+    <p class="text-xs text-gray-400">GNF / unité</p>
+  </div>
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+    <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Taux de marge</p>
+    <p class="mt-1 text-2xl font-bold {% if produit.pourcentage_marge >= 20 %}text-green-600{% elif produit.pourcentage_marge >= 10 %}text-yellow-600{% else %}text-red-600{% endif %}">
+      {{ produit.pourcentage_marge|floatformat:1 }}%
+    </p>
+    <p class="text-xs text-gray-400">sur prix vente gros</p>
+  </div>
+</div>
+
+<!-- Details tables -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Tarification</h2>
+    <dl class="space-y-3 text-sm">
+      <div class="flex justify-between">
+        <dt class="text-gray-500">Prix d'achat</dt>
+        <dd class="font-semibold text-gray-900">{{ produit.prix_achat|intcomma }} GNF</dd>
+      </div>
+      <div class="flex justify-between border-t border-gray-100 pt-3">
+        <dt class="text-gray-500">Prix vente gros</dt>
+        <dd class="font-semibold text-gray-900">{{ produit.prix_vente_gros|intcomma }} GNF</dd>
+      </div>
+      <div class="flex justify-between border-t border-gray-100 pt-3">
+        <dt class="text-gray-500">Prix vente détail</dt>
+        <dd class="font-semibold text-gray-900">{{ produit.prix_vente_detail|intcomma }} GNF</dd>
+      </div>
+    </dl>
+  </div>
+
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Informations</h2>
+    <dl class="space-y-3 text-sm">
+      <div class="flex justify-between">
+        <dt class="text-gray-500">Unité de mesure</dt>
+        <dd class="font-semibold text-gray-900">{{ produit.unite_mesure }}</dd>
+      </div>
+      <div class="flex justify-between border-t border-gray-100 pt-3">
+        <dt class="text-gray-500">Statut</dt>
+        <dd>{% if produit.actif %}<span class="text-green-600 font-semibold">Actif</span>{% else %}<span class="text-gray-400">Inactif</span>{% endif %}</dd>
+      </div>
+      <div class="flex justify-between border-t border-gray-100 pt-3">
+        <dt class="text-gray-500">Créé le</dt>
+        <dd class="text-gray-700">{{ produit.created_at|date:"d/m/Y" }}</dd>
+      </div>
+      <div class="flex justify-between border-t border-gray-100 pt-3">
+        <dt class="text-gray-500">Modifié le</dt>
+        <dd class="text-gray-700">{{ produit.updated_at|date:"d/m/Y H:i" }}</dd>
+      </div>
+    </dl>
+  </div>
 </div>
 {% endblock %}

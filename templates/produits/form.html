@@ -1,79 +1,189 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}{{ title }} - GesStock Madina{% endblock %}
 {% block page_title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="card">
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-            <div class="form-group">
-                <label>{{ form.code.label }}</label>
-                {{ form.code }}
-                {% if form.code.errors %}<span class="form-error">{{ form.code.errors.0 }}</span>{% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label>{{ form.nom.label }}</label>
-                {{ form.nom }}
-                {% if form.nom.errors %}<span class="form-error">{{ form.nom.errors.0 }}</span>{% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label>{{ form.categorie.label }}</label>
-                {{ form.categorie }}
-                {% if form.categorie.errors %}<span class="form-error">{{ form.categorie.errors.0 }}</span>{% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label>{{ form.unite_mesure.label }}</label>
-                {{ form.unite_mesure }}
-                {% if form.unite_mesure.errors %}<span class="form-error">{{ form.unite_mesure.errors.0 }}</span>{% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label>{{ form.prix_achat.label }}</label>
-                {{ form.prix_achat }}
-                {% if form.prix_achat.errors %}<span class="form-error">{{ form.prix_achat.errors.0 }}</span>{% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label>{{ form.prix_vente_gros.label }}</label>
-                {{ form.prix_vente_gros }}
-                {% if form.prix_vente_gros.errors %}<span class="form-error">{{ form.prix_vente_gros.errors.0 }}</span>{% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label>{{ form.prix_vente_detail.label }}</label>
-                {{ form.prix_vente_detail }}
-                {% if form.prix_vente_detail.errors %}<span class="form-error">{{ form.prix_vente_detail.errors.0 }}</span>{% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label>{{ form.stock_actuel.label }}</label>
-                {{ form.stock_actuel }}
-                {% if form.stock_actuel.errors %}<span class="form-error">{{ form.stock_actuel.errors.0 }}</span>{% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label>{{ form.seuil_alerte.label }}</label>
-                {{ form.seuil_alerte }}
-                {% if form.seuil_alerte.errors %}<span class="form-error">{{ form.seuil_alerte.errors.0 }}</span>{% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label>{{ form.photo.label }}</label>
-                {{ form.photo }}
-                {% if form.photo.errors %}<span class="form-error">{{ form.photo.errors.0 }}</span>{% endif %}
-            </div>
+<!-- Breadcrumb -->
+<nav class="flex items-center gap-1.5 text-sm text-gray-500 mb-6">
+  <a href="{% url 'produits:liste' %}" class="hover:text-blue-600">Produits</a>
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+  {% if produit %}
+    <a href="{% url 'produits:detail' produit.pk %}" class="hover:text-blue-600">{{ produit.nom }}</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+  {% endif %}
+  <span class="text-gray-900 font-medium">{{ title }}</span>
+</nav>
+
+<div x-data="produitForm()" class="max-w-3xl">
+  <form method="post" enctype="multipart/form-data" class="space-y-6">
+    {% csrf_token %}
+
+    <!-- Identité -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-5">Identité</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.code.label }}</label>
+          <input type="text" name="code" value="{{ form.code.value|default:'' }}"
+                 placeholder="Ex: RIZ001"
+                 class="w-full px-3 py-2 border {% if form.code.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if form.code.errors %}<p class="mt-1 text-xs text-red-600">{{ form.code.errors.0 }}</p>{% endif %}
         </div>
-        
-        <div style="margin-top: 20px; display: flex; gap: 10px;">
-            <button type="submit" class="btn btn-success">💾 Enregistrer</button>
-            <a href="{% url 'produits:liste' %}" class="btn btn-secondary">Annuler</a>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.nom.label }}</label>
+          <input type="text" name="nom" value="{{ form.nom.value|default:'' }}"
+                 placeholder="Nom du produit"
+                 class="w-full px-3 py-2 border {% if form.nom.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if form.nom.errors %}<p class="mt-1 text-xs text-red-600">{{ form.nom.errors.0 }}</p>{% endif %}
         </div>
-    </form>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.categorie.label }}</label>
+          <div class="w-full px-0 py-0 border {% if form.categorie.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg focus-within:ring-2 focus-within:ring-blue-500 bg-white">
+            {{ form.categorie }}
+          </div>
+          {% if form.categorie.errors %}<p class="mt-1 text-xs text-red-600">{{ form.categorie.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.unite_mesure.label }}</label>
+          <input type="text" name="unite_mesure" value="{{ form.unite_mesure.value|default:'' }}"
+                 placeholder="sac, carton, litre…"
+                 class="w-full px-3 py-2 border {% if form.unite_mesure.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if form.unite_mesure.errors %}<p class="mt-1 text-xs text-red-600">{{ form.unite_mesure.errors.0 }}</p>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Tarification -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-5">Tarification (GNF)</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.prix_achat.label }}</label>
+          <input type="number" name="prix_achat" value="{{ form.prix_achat.value|default:'' }}"
+                 step="0.01" min="0"
+                 x-model.number="prixAchat"
+                 class="w-full px-3 py-2 border {% if form.prix_achat.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if form.prix_achat.errors %}<p class="mt-1 text-xs text-red-600">{{ form.prix_achat.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.prix_vente_gros.label }}</label>
+          <input type="number" name="prix_vente_gros" value="{{ form.prix_vente_gros.value|default:'' }}"
+                 step="0.01" min="0"
+                 x-model.number="prixGros"
+                 class="w-full px-3 py-2 border {% if form.prix_vente_gros.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if form.prix_vente_gros.errors %}<p class="mt-1 text-xs text-red-600">{{ form.prix_vente_gros.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.prix_vente_detail.label }}</label>
+          <input type="number" name="prix_vente_detail" value="{{ form.prix_vente_detail.value|default:'' }}"
+                 step="0.01" min="0"
+                 class="w-full px-3 py-2 border {% if form.prix_vente_detail.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if form.prix_vente_detail.errors %}<p class="mt-1 text-xs text-red-600">{{ form.prix_vente_detail.errors.0 }}</p>{% endif %}
+        </div>
+      </div>
+
+      <!-- Live margin preview -->
+      <div x-show="prixAchat > 0 && prixGros > 0"
+           class="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-100 text-sm text-blue-700 flex gap-4">
+        <span>Marge brute : <strong x-text="(prixGros - prixAchat).toLocaleString('fr-FR') + ' GNF'"></strong></span>
+        <span>│</span>
+        <span>Taux : <strong x-text="prixAchat > 0 ? (((prixGros - prixAchat) / prixAchat) * 100).toFixed(1) + '%' : '—'"></strong></span>
+      </div>
+    </div>
+
+    <!-- Stock -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-5">Stock</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.stock_actuel.label }}</label>
+          <input type="number" name="stock_actuel" value="{{ form.stock_actuel.value|default:'' }}"
+                 step="0.001" min="0"
+                 class="w-full px-3 py-2 border {% if form.stock_actuel.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if form.stock_actuel.errors %}<p class="mt-1 text-xs text-red-600">{{ form.stock_actuel.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.seuil_alerte.label }}</label>
+          <input type="number" name="seuil_alerte" value="{{ form.seuil_alerte.value|default:'' }}"
+                 step="0.001" min="0"
+                 class="w-full px-3 py-2 border {% if form.seuil_alerte.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if form.seuil_alerte.errors %}<p class="mt-1 text-xs text-red-600">{{ form.seuil_alerte.errors.0 }}</p>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Photo + statut -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-5">Photo & statut</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.photo.label }}</label>
+          <!-- preview -->
+          <div class="mb-2" x-show="previewUrl">
+            <img :src="previewUrl" alt="Aperçu" class="w-24 h-24 rounded-lg object-cover border border-gray-200">
+          </div>
+          {% if produit and produit.photo %}
+          <div class="mb-2" x-show="!previewUrl">
+            <img src="{{ produit.photo.url }}" alt="{{ produit.nom }}" class="w-24 h-24 rounded-lg object-cover border border-gray-200">
+          </div>
+          {% endif %}
+          <input type="file" name="photo" accept="image/*"
+                 @change="previewFile($event)"
+                 class="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+          {% if form.photo.errors %}<p class="mt-1 text-xs text-red-600">{{ form.photo.errors.0 }}</p>{% endif %}
+        </div>
+
+        <div class="flex items-center gap-3 mt-6">
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" name="actif" {% if form.actif.value %}checked{% endif %}
+                   class="sr-only peer">
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+          <span class="text-sm font-medium text-gray-700">Produit actif</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-3">
+      <button type="submit"
+              class="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        Enregistrer
+      </button>
+      <a href="{% if produit %}{% url 'produits:detail' produit.pk %}{% else %}{% url 'produits:liste' %}{% endif %}"
+         class="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors">
+        Annuler
+      </a>
+    </div>
+  </form>
 </div>
+
+<script>
+function produitForm() {
+  return {
+    prixAchat: {{ form.prix_achat.value|default:0 }},
+    prixGros: {{ form.prix_vente_gros.value|default:0 }},
+    previewUrl: null,
+    previewFile(event) {
+      const file = event.target.files[0];
+      if (file) {
+        this.previewUrl = URL.createObjectURL(file);
+      }
+    }
+  }
+}
+</script>
 {% endblock %}

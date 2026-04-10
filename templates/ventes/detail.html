@@ -1,82 +1,103 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block title %}{{ vente.numero }} - GesStock Madina{% endblock %}
-{% block page_title %}Détail de la Vente{% endblock %}
+{% block page_title %}Détail vente{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: start;">
+<nav class="flex items-center gap-1.5 text-sm text-gray-500 mb-6">
+    <a href="{% url 'ventes:liste' %}" class="hover:text-blue-600">Ventes</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    <span class="text-gray-900 font-medium">{{ vente.numero }}</span>
+</nav>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-            <h2>{{ vente.numero }}</h2>
-            <p style="color: #64748b; margin-top: 5px;">{{ vente.date_vente|date:"d/m/Y H:i" }}</p>
+            <h1 class="text-2xl font-bold text-gray-900">{{ vente.numero }}</h1>
+            <p class="text-sm text-gray-500 mt-1">{{ vente.date_vente|date:"d/m/Y H:i" }} {% if vente.client %}• {{ vente.client.nom }}{% else %}• Vente anonyme{% endif %}</p>
         </div>
-        <div>
-            <a href="{% url 'factures:pdf' vente.pk %}" class="btn btn-success">📄 Télécharger PDF</a>
-            <a href="{% url 'ventes:liste' %}" class="btn btn-secondary">← Retour</a>
+        <div class="flex items-center gap-2">
+            <a href="{% url 'factures:pdf' vente.pk %}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m0 0l3-3m-3 3l-3-3m9 4H6a2 2 0 01-2-2V7a2 2 0 012-2h3.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V17a2 2 0 01-2 2z"/></svg>
+                Facture PDF
+            </a>
+            <a href="{% url 'ventes:liste' %}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors">← Retour</a>
         </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 30px;">
-        <div class="stat-card">
-            <div class="stat-card-label">Montant Total</div>
-            <div class="stat-value">{{ vente.montant_total }} GNF</div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+        <div class="rounded-lg border border-gray-200 p-4">
+            <p class="text-xs uppercase tracking-wide font-semibold text-gray-500">Montant total</p>
+            <p class="mt-1 text-2xl font-bold text-gray-900">{{ vente.montant_total|intcomma }}</p>
+            <p class="text-xs text-gray-400">GNF</p>
         </div>
-        <div class="stat-card">
-            <div class="stat-card-label">Montant Payé</div>
-            <div class="stat-value" style="color: #16a34a;">{{ vente.montant_paye }} GNF</div>
+        <div class="rounded-lg border border-green-200 p-4">
+            <p class="text-xs uppercase tracking-wide font-semibold text-green-700">Montant payé</p>
+            <p class="mt-1 text-2xl font-bold text-green-700">{{ vente.montant_paye|intcomma }}</p>
+            <p class="text-xs text-green-500">GNF</p>
         </div>
-        <div class="stat-card">
-            <div class="stat-card-label">Solde Restant</div>
-            <div class="stat-value" style="color: {% if vente.solde_restant > 0 %}#dc2626{% else %}#16a34a{% endif %};">{{ vente.solde_restant }} GNF</div>
+        <div class="rounded-lg border {% if vente.solde_restant > 0 %}border-red-200{% else %}border-green-200{% endif %} p-4">
+            <p class="text-xs uppercase tracking-wide font-semibold {% if vente.solde_restant > 0 %}text-red-700{% else %}text-green-700{% endif %}">Solde restant</p>
+            <p class="mt-1 text-2xl font-bold {% if vente.solde_restant > 0 %}text-red-700{% else %}text-green-700{% endif %}">{{ vente.solde_restant|intcomma }}</p>
+            <p class="text-xs {% if vente.solde_restant > 0 %}text-red-500{% else %}text-green-500{% endif %}">GNF</p>
         </div>
     </div>
 </div>
 
-<div class="card" style="margin-top: 30px;">
-    <h2 style="margin-bottom: 20px;">Produits</h2>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Produit</th>
-                <th>Quantité</th>
-                <th>Prix Unitaire</th>
-                <th>Sous-total</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ligne in lignes %}
-            <tr>
-                <td>{{ ligne.produit.nom }}</td>
-                <td>{{ ligne.quantite }}</td>
-                <td>{{ ligne.prix_unitaire }} GNF</td>
-                <td><strong>{{ ligne.sous_total }} GNF</strong></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+    <div class="px-5 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-lg font-semibold text-gray-900">Produits vendus</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Produit</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Quantité</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Prix unitaire</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Sous-total</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for ligne in lignes %}
+                <tr>
+                    <td class="px-4 py-3 text-gray-900">{{ ligne.produit.nom }}</td>
+                    <td class="px-4 py-3 text-right text-gray-700">{{ ligne.quantite|floatformat:"-3" }}</td>
+                    <td class="px-4 py-3 text-right text-gray-700">{{ ligne.prix_unitaire|intcomma }} GNF</td>
+                    <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ ligne.sous_total|intcomma }} GNF</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
 {% if paiements %}
-<div class="card" style="margin-top: 30px;">
-    <h2 style="margin-bottom: 20px;">Paiements</h2>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Montant</th>
-                <th>Mode</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for paiement in paiements %}
-            <tr>
-                <td>{{ paiement.date_paiement|date:"d/m/Y H:i" }}</td>
-                <td>{{ paiement.montant }} GNF</td>
-                <td>{{ paiement.get_mode_paiement_display }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-lg font-semibold text-gray-900">Paiements</h2>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Montant</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Mode</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for paiement in paiements %}
+                <tr>
+                    <td class="px-4 py-3 text-gray-600">{{ paiement.date_paiement|date:"d/m/Y H:i" }}</td>
+                    <td class="px-4 py-3 text-right text-green-700 font-semibold">{{ paiement.montant|intcomma }} GNF</td>
+                    <td class="px-4 py-3 text-gray-700">{{ paiement.get_mode_paiement_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endif %}
 {% endblock %}

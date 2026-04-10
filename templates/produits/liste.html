@@ -1,62 +1,103 @@
 {% extends 'base.html' %}
 
 {% block title %}Produits - GesStock Madina{% endblock %}
-{% block page_title %}Gestion des Produits{% endblock %}
+{% block page_title %}Produits{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <h2>Liste des Produits</h2>
-        <a href="{% url 'produits:creer' %}" class="btn btn-primary">+ Nouveau Produit</a>
+<div x-data="{ tab: 'produits' }">
+
+  <!-- Header row -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Catalogue produits</h1>
+      <p class="text-sm text-gray-500 mt-0.5">{{ page_obj.paginator.count }} produit{{ page_obj.paginator.count|pluralize }} enregistré{{ page_obj.paginator.count|pluralize }}</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <template x-if="tab === 'categories'">
+        {% if request.user.is_superuser or request.user.profilutilisateur.role == 'GERANT' %}
+        <span></span><!-- placeholder, form inline dans le panel -->
+        {% endif %}
+      </template>
+      {% if request.user.is_superuser or request.user.profilutilisateur.role == 'GERANT' %}
+      <a href="{% url 'produits:creer' %}"
+         x-show="tab === 'produits'"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        Nouveau produit
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-1 border-b border-gray-200 mb-5">
+    <button @click="tab = 'produits'"
+            :class="tab === 'produits' ? 'border-blue-600 text-blue-600 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'"
+            class="px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      Produits
+    </button>
+    <button @click="tab = 'categories'"
+            :class="tab === 'categories' ? 'border-blue-600 text-blue-600 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700'"
+            class="px-4 py-2.5 text-sm border-b-2 -mb-px transition-colors flex items-center gap-1.5">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+      Catégories
+      <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{{ categories|length }}</span>
+    </button>
+  </div>
+
+  <!-- Tab: Produits -->
+  <div x-show="tab === 'produits'">
+    <!-- Filters -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
+      <div class="flex flex-col sm:flex-row gap-3">
+        <div class="flex-1">
+          <input
+            type="text"
+            name="search"
+            id="search-input"
+            value="{{ search }}"
+            placeholder="Rechercher par nom ou code…"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            hx-get="{% url 'produits:liste' %}"
+            hx-trigger="keyup changed delay:350ms"
+            hx-target="#produits-table"
+            hx-swap="outerHTML"
+            hx-include="#cat-filter"
+          />
+        </div>
+        <select
+          id="cat-filter"
+          name="categorie"
+          class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          hx-get="{% url 'produits:liste' %}"
+          hx-trigger="change"
+          hx-target="#produits-table"
+          hx-swap="outerHTML"
+          hx-include="#search-input"
+        >
+          <option value="">Toutes catégories</option>
+          {% for cat in categories %}
+            <option value="{{ cat.pk }}" {% if categorie_id == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.nom }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
 
-    <form method="get" style="margin-bottom: 20px;">
-        <div style="display: flex; gap: 10px;">
-            <input type="text" name="search" value="{{ search }}" placeholder="Rechercher par nom ou code..." class="form-control" style="flex: 1;">
-            <button type="submit" class="btn btn-primary">Rechercher</button>
-        </div>
-    </form>
+    <!-- Table -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {% include 'produits/partials/table.html' %}
+    </div>
+  </div>
 
-    {% if produits %}
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Code</th>
-                <th>Nom</th>
-                <th>Catégorie</th>
-                <th>Stock</th>
-                <th>Seuil</th>
-                <th>Prix Gros</th>
-                <th>Statut</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for produit in produits %}
-            <tr>
-                <td><strong>{{ produit.code }}</strong></td>
-                <td>{{ produit.nom }}</td>
-                <td>{{ produit.categorie.nom }}</td>
-                <td>{{ produit.stock_actuel }} {{ produit.unite_mesure }}</td>
-                <td>{{ produit.seuil_alerte }}</td>
-                <td>{{ produit.prix_vente_gros }} GNF</td>
-                <td>
-                    {% if produit.en_alerte %}
-                        <span class="badge badge-danger">⚠️ Alerte</span>
-                    {% else %}
-                        <span class="badge badge-success">✓ OK</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <a href="{% url 'produits:detail' produit.pk %}" class="btn btn-sm" style="background: #0284c7; color: white;">Voir</a>
-                    <a href="{% url 'produits:modifier' produit.pk %}" class="btn btn-sm" style="background: #ea580c; color: white;">Éditer</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% else %}
-    <p style="text-align: center; color: #64748b; padding: 40px;">Aucun produit trouvé.</p>
-    {% endif %}
+  <!-- Tab: Catégories -->
+  <div x-show="tab === 'categories'" x-cloak>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+      {% include 'produits/partials/categories.html' %}
+    </div>
+  </div>
+
 </div>
 {% endblock %}
