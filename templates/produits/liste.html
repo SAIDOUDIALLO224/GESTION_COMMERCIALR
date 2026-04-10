@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Produits - GesStock Madina{% endblock %}
+{% block page_title %}Gestion des Produits{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Liste des Produits</h2>
+        <a href="{% url 'produits:creer' %}" class="btn btn-primary">+ Nouveau Produit</a>
+    </div>
+
+    <form method="get" style="margin-bottom: 20px;">
+        <div style="display: flex; gap: 10px;">
+            <input type="text" name="search" value="{{ search }}" placeholder="Rechercher par nom ou code..." class="form-control" style="flex: 1;">
+            <button type="submit" class="btn btn-primary">Rechercher</button>
+        </div>
+    </form>
+
+    {% if produits %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Nom</th>
+                <th>Catégorie</th>
+                <th>Stock</th>
+                <th>Seuil</th>
+                <th>Prix Gros</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for produit in produits %}
+            <tr>
+                <td><strong>{{ produit.code }}</strong></td>
+                <td>{{ produit.nom }}</td>
+                <td>{{ produit.categorie.nom }}</td>
+                <td>{{ produit.stock_actuel }} {{ produit.unite_mesure }}</td>
+                <td>{{ produit.seuil_alerte }}</td>
+                <td>{{ produit.prix_vente_gros }} GNF</td>
+                <td>
+                    {% if produit.en_alerte %}
+                        <span class="badge badge-danger">⚠️ Alerte</span>
+                    {% else %}
+                        <span class="badge badge-success">✓ OK</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'produits:detail' produit.pk %}" class="btn btn-sm" style="background: #0284c7; color: white;">Voir</a>
+                    <a href="{% url 'produits:modifier' produit.pk %}" class="btn btn-sm" style="background: #ea580c; color: white;">Éditer</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align: center; color: #64748b; padding: 40px;">Aucun produit trouvé.</p>
+    {% endif %}
+</div>
+{% endblock %}

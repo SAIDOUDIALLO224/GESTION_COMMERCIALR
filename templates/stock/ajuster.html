@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Ajustement de Stock - GesStock Madina{% endblock %}
+{% block page_title %}Ajustement de Stock{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 style="margin-bottom: 20px;">Ajuster le Stock</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="form-group">
+                <label>{{ form.produit.label }}</label>
+                {{ form.produit }}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.type_mvt.label }}</label>
+                {{ form.type_mvt }}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.quantite.label }}</label>
+                {{ form.quantite }}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>{{ form.motif.label }}</label>
+            {{ form.motif }}
+        </div>
+        
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-success">✓ Enregistrer</button>
+        </div>
+    </form>
+</div>
+
+<div class="card" style="margin-top: 30px;">
+    <h2 style="margin-bottom: 20px;">Derniers Mouvements</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th>Type</th>
+                <th>Quantité</th>
+                <th>Motif</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mvt in mouvements %}
+            <tr>
+                <td>{{ mvt.produit.nom }}</td>
+                <td><span class="badge badge-{% if mvt.type_mvt == 'ENTREE' %}success{% else %}danger{% endif %}">{{ mvt.get_type_mvt_display }}</span></td>
+                <td>{{ mvt.quantite }}</td>
+                <td>{{ mvt.motif }}</td>
+                <td>{{ mvt.created_at|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

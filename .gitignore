@@ -1,0 +1,21 @@
+# .gitignore for django project
+# Python bytecode files
+__pycache__/
+*.pyc
+*.pyo
+
+# Django specific files
+*.log
+*.pot
+
+# Environment variables
+.env
+
+# Database files
+db.sqlite3
+
+# Media files
+media/
+
+# Static files
+staticfiles/

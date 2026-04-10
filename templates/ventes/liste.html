@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Ventes - GesStock Madina{% endblock %}
+{% block page_title %}Gestion des Ventes{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Liste des Ventes</h2>
+        <a href="{% url 'ventes:nouvelle' %}" class="btn btn-primary">+ Nouvelle Vente</a>
+    </div>
+
+    {% if ventes %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Numéro</th>
+                <th>Client</th>
+                <th>Date</th>
+                <th>Montant</th>
+                <th>Payé</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vente in ventes %}
+            <tr>
+                <td><strong>{{ vente.numero }}</strong></td>
+                <td>{{ vente.client.nom|default:"Vente anonyme" }}</td>
+                <td>{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
+                <td>{{ vente.montant_total }} GNF</td>
+                <td>{{ vente.montant_paye }} GNF</td>
+                <td><span class="badge badge-{% if vente.statut == 'SOLDE' %}success{% else %}warning{% endif %}">{{ vente.get_statut_display }}</span></td>
+                <td>
+                    <a href="{% url 'ventes:detail' vente.pk %}" class="btn btn-sm" style="background: #0284c7; color: white;">Voir</a>
+                    <a href="{% url 'factures:pdf' vente.pk %}" class="btn btn-sm" style="background: #16a34a; color: white;">PDF</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align: center; color: #64748b; padding: 40px;">Aucune vente enregistrée.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; }
+        .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #1e40af; padding-bottom: 20px; }
+        .header h1 { margin: 0; color: #1e40af; }
+        .header p { margin: 5px 0; font-size: 12px; color: #666; }
+        .info { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px; font-size: 12px; }
+        .info-block h3 { margin-top: 0; color: #1e40af; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+        th { background-color: #f0f0f0; padding: 10px; text-align: left; font-weight: bold; border-bottom: 2px solid #1e40af; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; }
+        .total-section { text-align: right; margin-top: 20px; }
+        .total-section p { margin: 5px 0; font-size: 14px; }
+        .total-section .grand-total { font-size: 18px; font-weight: bold; color: #1e40af; }
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; text-align: center; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>FACTURE</h1>
+        <p>{{ magasin }}</p>
+        <p>{{ adresse }}</p>
+    </div>
+
+    <div class="info">
+        <div class="info-block">
+            <h3>Facture</h3>
+            <p><strong>Numéro:</strong> {{ facture.numero_facture }}</p>
+            <p><strong>Date:</strong> {{ facture.date_emission|date:"d/m/Y H:i" }}</p>
+        </div>
+        <div class="info-block">
+            <h3>Client</h3>
+            <p><strong>{{ vente.client.nom|default:"Vente anonyme" }}</strong></p>
+            {% if vente.client %}
+            <p>Téléphone: {{ vente.client.telephone }}</p>
+            <p>Quartier: {{ vente.client.quartier }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th style="text-align: right;">Quantité</th>
+                <th style="text-align: right;">Prix Unitaire</th>
+                <th style="text-align: right;">Sous-total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+            <tr>
+                <td>{{ ligne.produit.nom }}</td>
+                <td style="text-align: right;">{{ ligne.quantite }}</td>
+                <td style="text-align: right;">{{ ligne.prix_unitaire }} GNF</td>
+                <td style="text-align: right;">{{ ligne.sous_total }} GNF</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="total-section">
+        <p><strong>Montant Total:</strong> {{ vente.montant_total }} GNF</p>
+        <p><strong>Montant Payé:</strong> {{ vente.montant_paye }} GNF</p>
+        <p class="grand-total">Solde Restant: {{ vente.solde_restant }} GNF</p>
+    </div>
+
+    <div class="footer">
+        <p>Merci de votre achat!</p>
+        <p>Généré le {{ "now"|date:"d/m/Y H:i" }}</p>
+    </div>
+</body>
+</html>

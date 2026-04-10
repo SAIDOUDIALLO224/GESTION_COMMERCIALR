@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ produit.nom }} - GesStock Madina{% endblock %}
+{% block page_title %}Détail du Produit{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div>
+            <h2>{{ produit.nom }}</h2>
+            <p style="color: #64748b; margin-top: 5px;">Code: <strong>{{ produit.code }}</strong></p>
+        </div>
+        <div>
+            <a href="{% url 'produits:modifier' produit.pk %}" class="btn btn-primary">✏️ Modifier</a>
+            <a href="{% url 'produits:liste' %}" class="btn btn-secondary">← Retour</a>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+        <div>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Informations</h3>
+            <p><strong>Catégorie:</strong> {{ produit.categorie.nom }}</p>
+            <p><strong>Unité:</strong> {{ produit.unite_mesure }}</p>
+            <p><strong>Actif:</strong> {% if produit.actif %}✓ Oui{% else %}✗ Non{% endif %}</p>
+        </div>
+        
+        <div>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Tarification</h3>
+            <p><strong>Prix d'achat:</strong> {{ produit.prix_achat }} GNF</p>
+            <p><strong>Prix vente gros:</strong> {{ produit.prix_vente_gros }} GNF</p>
+            <p><strong>Prix vente détail:</strong> {{ produit.prix_vente_detail }} GNF</p>
+            <p><strong>Marge:</strong> {{ produit.pourcentage_marge|floatformat:1 }}%</p>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+        <div class="stat-card">
+            <div class="stat-card-label">Stock Actuel</div>
+            <div class="stat-value">{{ produit.stock_actuel }}</div>
+            <div style="font-size: 12px; color: #64748b;">{{ produit.unite_mesure }}</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-label">Seuil d'Alerte</div>
+            <div class="stat-value">{{ produit.seuil_alerte }}</div>
+            {% if produit.en_alerte %}
+                <div style="color: #dc2626; font-weight: 600; margin-top: 10px;">⚠️ ALERTE STOCK</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

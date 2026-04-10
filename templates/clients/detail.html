@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ client.nom }} - GesStock Madina{% endblock %}
+{% block page_title %}Détail du Client{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div>
+            <h2>{{ client.nom }}</h2>
+            <p style="color: #64748b; margin-top: 5px;">{{ client.get_type_client_display }}</p>
+        </div>
+        <div>
+            <a href="{% url 'clients:modifier' client.pk %}" class="btn btn-primary">✏️ Modifier</a>
+            <a href="{% url 'clients:liste' %}" class="btn btn-secondary">← Retour</a>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+        <div>
+            <h3 style="margin-bottom: 15px; color: #1e293b;">Informations</h3>
+            <p><strong>Téléphone:</strong> {{ client.telephone }}</p>
+            <p><strong>Téléphone 2:</strong> {{ client.telephone2|default:"—" }}</p>
+            <p><strong>Quartier:</strong> {{ client.quartier }}</p>
+            <p><strong>Statut:</strong> {% if client.actif %}✓ Actif{% else %}✗ Inactif{% endif %}</p>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-label">Solde Dû</div>
+            <div class="stat-value" style="{% if client.solde_du > 0 %}color: #dc2626;{% else %}color: #16a34a;{% endif %}">
+                {{ client.solde_du }} GNF
+            </div>
+        </div>
+    </div>
+
+    {% if client.notes %}
+    <div style="margin-top: 30px; padding: 15px; background: #f8fafc; border-radius: 6px;">
+        <h3 style="margin-bottom: 10px; color: #1e293b;">Notes</h3>
+        <p>{{ client.notes }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card" style="margin-top: 30px;">
+    <h2 style="margin-bottom: 20px;">📋 Historique des Ventes</h2>
+    {% if ventes %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Numéro</th>
+                <th>Date</th>
+                <th>Montant</th>
+                <th>Payé</th>
+                <th>Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vente in ventes %}
+            <tr>
+                <td><strong>{{ vente.numero }}</strong></td>
+                <td>{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
+                <td>{{ vente.montant_total }} GNF</td>
+                <td>{{ vente.montant_paye }} GNF</td>
+                <td><span class="badge badge-{% if vente.statut == 'SOLDE' %}success{% else %}warning{% endif %}">{{ vente.get_statut_display }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align: center; color: #64748b; padding: 20px;">Aucune vente.</p>
+    {% endif %}
+</div>
+{% endblock %}

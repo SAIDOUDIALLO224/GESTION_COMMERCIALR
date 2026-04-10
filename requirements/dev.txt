@@ -1,0 +1,7 @@
+-r base.txt
+pytest-django>=4.8
+factory-boy>=3.3
+black>=24.0
+ruff>=0.4
+django-debug-toolbar>=4.4
+coverage>=7.5

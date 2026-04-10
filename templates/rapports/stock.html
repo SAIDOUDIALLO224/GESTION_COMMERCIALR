@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}Rapport Stock - GesStock Madina{% endblock %}
+{% block page_title %}Rapport de Stock{% endblock %}
+
+{% block content %}
+<div class="stat-card">
+    <div class="stat-card-label">Valeur Totale du Stock</div>
+    <div class="stat-value">{{ total_stock_value }} GNF</div>
+</div>
+
+<div class="card" style="margin-top: 30px;">
+    <h2 style="margin-bottom: 20px;">État du Stock</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th>Catégorie</th>
+                <th>Stock</th>
+                <th>Seuil</th>
+                <th>Valeur</th>
+                <th>Statut</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for produit in produits %}
+            <tr>
+                <td><strong>{{ produit.nom }}</strong></td>
+                <td>{{ produit.categorie.nom }}</td>
+                <td>{{ produit.stock_actuel }} {{ produit.unite_mesure }}</td>
+                <td>{{ produit.seuil_alerte }}</td>
+                <td>{{ produit.stock_actuel|floatformat:2 }} GNF</td>
+                <td>
+                    {% if produit.en_alerte %}
+                        <span class="badge badge-danger">⚠️ Alerte</span>
+                    {% else %}
+                        <span class="badge badge-success">✓ OK</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

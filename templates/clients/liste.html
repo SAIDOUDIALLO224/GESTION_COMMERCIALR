@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Clients - GesStock Madina{% endblock %}
+{% block page_title %}Gestion des Clients{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Liste des Clients</h2>
+        <a href="{% url 'clients:creer' %}" class="btn btn-primary">+ Nouveau Client</a>
+    </div>
+
+    <form method="get" style="margin-bottom: 20px;">
+        <div style="display: flex; gap: 10px;">
+            <input type="text" name="search" value="{{ search }}" placeholder="Rechercher par nom ou téléphone..." class="form-control" style="flex: 1;">
+            <button type="submit" class="btn btn-primary">Rechercher</button>
+        </div>
+    </form>
+
+    {% if clients %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Téléphone</th>
+                <th>Type</th>
+                <th>Quartier</th>
+                <th>Solde Dû</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr>
+                <td><strong>{{ client.nom }}</strong></td>
+                <td>{{ client.telephone }}</td>
+                <td>{{ client.get_type_client_display }}</td>
+                <td>{{ client.quartier }}</td>
+                <td>
+                    {% if client.solde_du > 0 %}
+                        <span class="badge badge-danger">{{ client.solde_du }} GNF</span>
+                    {% else %}
+                        <span class="badge badge-success">✓ Soldé</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'clients:detail' client.pk %}" class="btn btn-sm" style="background: #0284c7; color: white;">Voir</a>
+                    <a href="{% url 'clients:modifier' client.pk %}" class="btn btn-sm" style="background: #ea580c; color: white;">Éditer</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align: center; color: #64748b; padding: 40px;">Aucun client trouvé.</p>
+    {% endif %}
+</div>
+{% endblock %}

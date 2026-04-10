@@ -1,0 +1,4 @@
+-r base.txt
+gunicorn>=22.0
+celery>=5.3
+redis>=5.0

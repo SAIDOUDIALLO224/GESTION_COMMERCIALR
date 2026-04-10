@@ -1,0 +1,9 @@
+Django>=5.0,<6.0
+psycopg2-binary>=2.9
+python-decouple>=3.8
+Pillow>=10.0
+weasyprint>=62.0
+openpyxl>=3.1
+django-allauth>=0.63
+django-htmx>=1.18
+django-csp>=3.8

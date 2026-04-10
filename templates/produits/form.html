@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - GesStock Madina{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div class="form-group">
+                <label>{{ form.code.label }}</label>
+                {{ form.code }}
+                {% if form.code.errors %}<span class="form-error">{{ form.code.errors.0 }}</span>{% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.nom.label }}</label>
+                {{ form.nom }}
+                {% if form.nom.errors %}<span class="form-error">{{ form.nom.errors.0 }}</span>{% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.categorie.label }}</label>
+                {{ form.categorie }}
+                {% if form.categorie.errors %}<span class="form-error">{{ form.categorie.errors.0 }}</span>{% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.unite_mesure.label }}</label>
+                {{ form.unite_mesure }}
+                {% if form.unite_mesure.errors %}<span class="form-error">{{ form.unite_mesure.errors.0 }}</span>{% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.prix_achat.label }}</label>
+                {{ form.prix_achat }}
+                {% if form.prix_achat.errors %}<span class="form-error">{{ form.prix_achat.errors.0 }}</span>{% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.prix_vente_gros.label }}</label>
+                {{ form.prix_vente_gros }}
+                {% if form.prix_vente_gros.errors %}<span class="form-error">{{ form.prix_vente_gros.errors.0 }}</span>{% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.prix_vente_detail.label }}</label>
+                {{ form.prix_vente_detail }}
+                {% if form.prix_vente_detail.errors %}<span class="form-error">{{ form.prix_vente_detail.errors.0 }}</span>{% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.stock_actuel.label }}</label>
+                {{ form.stock_actuel }}
+                {% if form.stock_actuel.errors %}<span class="form-error">{{ form.stock_actuel.errors.0 }}</span>{% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.seuil_alerte.label }}</label>
+                {{ form.seuil_alerte }}
+                {% if form.seuil_alerte.errors %}<span class="form-error">{{ form.seuil_alerte.errors.0 }}</span>{% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.photo.label }}</label>
+                {{ form.photo }}
+                {% if form.photo.errors %}<span class="form-error">{{ form.photo.errors.0 }}</span>{% endif %}
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-success">💾 Enregistrer</button>
+            <a href="{% url 'produits:liste' %}" class="btn btn-secondary">Annuler</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
