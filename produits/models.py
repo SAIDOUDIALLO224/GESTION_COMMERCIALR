@@ -66,6 +66,31 @@ class Produit(models.Model):
     def __str__(self):
         return f"{self.code} - {self.nom}"
 
+    @classmethod
+    def generate_next_code(cls):
+        """Generates the next internal product code with PRD prefix."""
+        prefix = 'PRD'
+        max_num = 0
+        for code in cls.objects.filter(code__startswith=prefix).values_list('code', flat=True):
+            suffix = code[len(prefix):]
+            if suffix.isdigit():
+                max_num = max(max_num, int(suffix))
+        return f"{prefix}{max_num + 1:04d}"
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            old_code = Produit.objects.filter(pk=self.pk).values_list('code', flat=True).first()
+            if old_code:
+                self.code = old_code
+
+        if not self.code:
+            generated_code = self.generate_next_code()
+            while Produit.objects.exclude(pk=self.pk).filter(code=generated_code).exists():
+                number = int(generated_code[3:]) + 1
+                generated_code = f"PRD{number:04d}"
+            self.code = generated_code
+        super().save(*args, **kwargs)
+
     @property
     def en_alerte(self):
         """Vérifie si le produit est en alerte de stock"""

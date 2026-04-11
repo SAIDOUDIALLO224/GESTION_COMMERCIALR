@@ -142,8 +142,8 @@ def nouvelle_vente(request):
                 
                 vente.save()
                 
-                # Créer le paiement
-                if montant_paye > 0:
+                # Créer le paiement uniquement si la vente est rattachée a un client.
+                if montant_paye > 0 and vente.client:
                     Paiement.objects.create(
                         vente=vente,
                         client=vente.client,

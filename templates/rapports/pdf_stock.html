@@ -69,6 +69,7 @@
                 <th>Produit</th>
                 <th>Type</th>
                 <th class="right">Quantite</th>
+                <th>Fournisseur</th>
                 <th>Motif</th>
             </tr>
         </thead>
@@ -79,10 +80,11 @@
                 <td>{{ mvt.produit.nom }}</td>
                 <td>{{ mvt.get_type_mvt_display }}</td>
                 <td class="right">{{ mvt.quantite|floatformat:"-3" }}</td>
+                <td>{{ mvt.fournisseur.nom|default:"-" }}</td>
                 <td>{{ mvt.motif|default:"-" }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="5">Aucun mouvement enregistre.</td></tr>
+            <tr><td colspan="6">Aucun mouvement enregistre.</td></tr>
             {% endfor %}
         </tbody>
     </table>

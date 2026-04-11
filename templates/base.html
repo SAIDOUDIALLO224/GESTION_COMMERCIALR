@@ -84,6 +84,15 @@
                     Clients
                 </a>
 
+                <a href="/fournisseurs/" hx-boost="true"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
+                          {% if 'fournisseurs' in request.path %}bg-white/20 text-white{% else %}text-blue-100 hover:bg-white/10 hover:text-white{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-[18px] shrink-0">
+                        <path fill-rule="evenodd" d="M2 5.25A2.25 2.25 0 0 1 4.25 3h11.5A2.25 2.25 0 0 1 18 5.25v9.5A2.25 2.25 0 0 1 15.75 17H4.25A2.25 2.25 0 0 1 2 14.75v-9.5ZM4.75 6a.75.75 0 0 0 0 1.5h7.5a.75.75 0 0 0 0-1.5h-7.5Zm0 3a.75.75 0 0 0 0 1.5h10.5a.75.75 0 0 0 0-1.5H4.75Zm0 3a.75.75 0 0 0 0 1.5h4.5a.75.75 0 0 0 0-1.5h-4.5Z" clip-rule="evenodd"/>
+                    </svg>
+                    Fournisseurs
+                </a>
+
                 <a href="/ventes/" hx-boost="true"
                    class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150
                           {% if 'ventes' in request.path %}bg-white/20 text-white{% else %}text-blue-100 hover:bg-white/10 hover:text-white{% endif %}">

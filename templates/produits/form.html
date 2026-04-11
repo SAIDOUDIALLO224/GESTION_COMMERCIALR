@@ -27,9 +27,18 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.code.label }}</label>
-          <input type="text" name="code" value="{{ form.code.value|default:'' }}"
-                 placeholder="Ex: RIZ001"
-                 class="w-full px-3 py-2 border {% if form.code.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+           {% if produit %}
+           <input type="text" value="{{ form.code.value|default:'' }}"
+             placeholder="Ex: PRD0001"
+             disabled
+             class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed">
+           <p class="mt-1 text-xs text-gray-500">Le code produit est verrouillé après création.</p>
+           {% else %}
+           <input type="text" value="Code généré automatiquement"
+             disabled
+             class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-500 cursor-not-allowed">
+           <p class="mt-1 text-xs text-gray-500">Le code sera attribué automatiquement à l'enregistrement.</p>
+           {% endif %}
           {% if form.code.errors %}<p class="mt-1 text-xs text-red-600">{{ form.code.errors.0 }}</p>{% endif %}
         </div>
 

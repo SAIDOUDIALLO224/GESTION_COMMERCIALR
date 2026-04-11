@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; font-size: 12px; }
+        .header { text-align: center; border-bottom: 2px solid #1e40af; padding-bottom: 14px; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #1e40af; }
+        .meta { margin: 4px 0; color: #555; font-size: 11px; }
+        .kpis { margin: 12px 0 16px 0; }
+        .kpis p { margin: 4px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f3f4f6; border-bottom: 2px solid #1e40af; text-align: left; padding: 8px; }
+        td { border-bottom: 1px solid #e5e7eb; padding: 8px; }
+        .right { text-align: right; }
+        .footer { margin-top: 24px; font-size: 11px; color: #666; text-align: center; }
+    </style>
+</head>
+<body>
+    {% load humanize %}
+
+    <div class="header">
+        <h1>Inventaire de Stock</h1>
+        <p class="meta">Genere le {% now "d/m/Y \\a H:i" %}</p>
+    </div>
+
+    <div class="kpis">
+        <p><strong>Nombre de produits:</strong> {{ total_produits|intcomma }}</p>
+        <p><strong>Quantite totale en stock:</strong> {{ total_stock|floatformat:"-3" }}</p>
+        <p><strong>Valeur totale du stock:</strong> {{ total_valeur|floatformat:0|intcomma }} GNF</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Produit</th>
+                <th>Categorie</th>
+                <th class="right">Stock</th>
+                <th>Unite</th>
+                <th class="right">Prix achat</th>
+                <th class="right">Valeur stock</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for produit in produits %}
+            <tr>
+                <td>{{ produit.code }}</td>
+                <td>{{ produit.nom }}</td>
+                <td>{{ produit.categorie.nom }}</td>
+                <td class="right">{{ produit.stock_actuel|floatformat:"-3" }}</td>
+                <td>{{ produit.unite_mesure }}</td>
+                <td class="right">{{ produit.prix_achat|floatformat:0|intcomma }}</td>
+                <td class="right">{{ produit.valeur_stock|floatformat:0|intcomma }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7">Aucun produit en stock.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Document systeme GesStock Madina
+    </div>
+</body>
+</html>

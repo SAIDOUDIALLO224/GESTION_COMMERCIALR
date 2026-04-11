@@ -1,9 +1,13 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import F
+from django.db.models import F, Sum, DecimalField, ExpressionWrapper
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 from .models import MouvementStock
 from produits.models import Produit
+from fournisseurs.models import Fournisseur
+from weasyprint import HTML
 from django import forms
 
 
@@ -32,6 +36,15 @@ class AjustementStockForm(forms.Form):
         }),
         label='Type de mouvement'
     )
+    fournisseur = forms.ModelChoiceField(
+        queryset=Fournisseur.objects.all().order_by('nom'),
+        required=False,
+        empty_label='Sélectionner un fournisseur',
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
+        label='Fournisseur (obligatoire pour une entrée)'
+    )
     motif = forms.CharField(
         widget=forms.Textarea(attrs={
             'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
@@ -40,6 +53,14 @@ class AjustementStockForm(forms.Form):
         }),
         label='Motif (obligatoire)'
     )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        type_mvt = cleaned_data.get('type_mvt')
+        fournisseur = cleaned_data.get('fournisseur')
+        if type_mvt == 'ENTREE' and not fournisseur:
+            self.add_error('fournisseur', 'Veuillez sélectionner le fournisseur pour une entrée de stock.')
+        return cleaned_data
 
 
 @login_required
@@ -50,6 +71,7 @@ def ajuster_stock(request):
             produit = form.cleaned_data['produit']
             quantite = form.cleaned_data['quantite']
             type_mvt = form.cleaned_data['type_mvt']
+            fournisseur = form.cleaned_data.get('fournisseur')
             motif = form.cleaned_data['motif']
             
             # Créer le mouvement
@@ -57,6 +79,7 @@ def ajuster_stock(request):
                 produit=produit,
                 type_mvt=type_mvt,
                 quantite=quantite,
+                fournisseur=fournisseur,
                 motif=motif,
                 utilisateur=request.user
             )
@@ -74,7 +97,7 @@ def ajuster_stock(request):
     else:
         form = AjustementStockForm()
     
-    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur').all().order_by('-created_at')[:20]
+    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur', 'fournisseur').all().order_by('-created_at')[:20]
     total_mouvements = MouvementStock.objects.count()
     total_entrees = MouvementStock.objects.filter(type_mvt='ENTREE').count()
     total_sorties = MouvementStock.objects.filter(type_mvt='SORTIE').count()
@@ -89,3 +112,27 @@ def ajuster_stock(request):
         'produits_alerte': produits_alerte,
     }
     return render(request, 'stock/ajuster.html', context)
+
+
+@login_required
+def imprimer_inventaire(request):
+    produits = Produit.objects.select_related('categorie').annotate(
+        valeur_stock=ExpressionWrapper(
+            F('stock_actuel') * F('prix_achat'),
+            output_field=DecimalField(max_digits=18, decimal_places=2)
+        )
+    ).order_by('nom')
+
+    context = {
+        'produits': produits,
+        'total_produits': produits.count(),
+        'total_stock': produits.aggregate(total=Sum('stock_actuel'))['total'] or 0,
+        'total_valeur': produits.aggregate(total=Sum('valeur_stock'))['total'] or 0,
+    }
+
+    html_string = render_to_string('stock/inventaire_pdf.html', context)
+    pdf = HTML(string=html_string).write_pdf()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="inventaire_stock.pdf"'
+    return response

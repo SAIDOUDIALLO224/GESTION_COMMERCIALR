@@ -3,6 +3,7 @@ from django.core.validators import MinValueValidator
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import User
 from produits.models import Produit
+from fournisseurs.models import Fournisseur
 
 
 class MouvementStock(models.Model):
@@ -28,6 +29,10 @@ class MouvementStock(models.Model):
     utilisateur = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True,
         verbose_name=_("Utilisateur")
+    )
+    fournisseur = models.ForeignKey(
+        Fournisseur, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("Fournisseur")
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Créé le"))
 

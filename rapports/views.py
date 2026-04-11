@@ -87,7 +87,7 @@ def rapport_stock(request):
     total_stock_value = produits.aggregate(Sum('valeur_stock'))['valeur_stock__sum'] or 0
     produits_alerte = produits.filter(stock_actuel__lte=F('seuil_alerte'))
 
-    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur').order_by('-created_at')
+    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur', 'fournisseur').order_by('-created_at')
     if date_debut:
         mouvements = mouvements.filter(created_at__date__gte=date_debut)
     if date_fin:
@@ -168,7 +168,7 @@ def export_pdf_stock(request):
             output_field=DecimalField(max_digits=18, decimal_places=2)
         )
     )
-    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur').order_by('-created_at')
+    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur', 'fournisseur').order_by('-created_at')
     if date_debut:
         mouvements = mouvements.filter(created_at__date__gte=date_debut)
     if date_fin:

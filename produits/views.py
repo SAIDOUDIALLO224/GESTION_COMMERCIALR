@@ -10,6 +10,13 @@ from utilisateurs.decorators import gerant_required
 
 
 class ProduitForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance or not self.instance.pk:
+            self.fields['code'].required = False
+        else:
+            self.fields['code'].disabled = True
+
     class Meta:
         model = Produit
         fields = ['code', 'nom', 'categorie', 'unite_mesure', 'prix_achat',

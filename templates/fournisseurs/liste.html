@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Fournisseurs - GesStock Madina{% endblock %}
+{% block page_title %}Fournisseurs{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-gray-500">Fournisseurs</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900">{{ total_fournisseurs|intcomma }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-red-700">Solde dû fournisseurs</p>
+        <p class="mt-1 text-2xl font-bold text-red-700">{{ total_solde_du|floatformat:0|intcomma }}</p>
+        <p class="text-xs text-red-500">GNF</p>
+    </div>
+    <div class="bg-white rounded-xl border border-blue-200 shadow-sm p-4 flex items-center justify-center md:justify-end">
+        <a href="{% url 'fournisseurs:creer' %}" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nouveau fournisseur
+        </a>
+    </div>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+        <div class="md:col-span-4">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Recherche</label>
+            <input type="text" name="search" value="{{ search }}" placeholder="Nom, téléphone, adresse" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="flex gap-2">
+            <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">Filtrer</button>
+            <a href="{% url 'fournisseurs:liste' %}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Fournisseur</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Téléphone</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Adresse</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Solde dû</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Action</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for fournisseur in fournisseurs %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ fournisseur.nom }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ fournisseur.telephone|default:'—' }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ fournisseur.adresse|default:'—'|truncatechars:60 }}</td>
+                    <td class="px-4 py-3 text-right {% if fournisseur.solde_du > 0 %}text-red-700 font-semibold{% else %}text-green-700{% endif %}">{{ fournisseur.solde_du|floatformat:0|intcomma }} GNF</td>
+                    <td class="px-4 py-3 text-right">
+                        <a href="{% url 'fournisseurs:detail' fournisseur.pk %}" class="inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">Voir</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-4 py-10 text-center text-gray-400">Aucun fournisseur trouvé.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="px-4 py-3 border-t border-gray-200 flex items-center justify-between text-sm">
+        <p class="text-gray-500">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</p>
+        <div class="flex items-center gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}" class="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Précédent</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}" class="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Suivant</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
