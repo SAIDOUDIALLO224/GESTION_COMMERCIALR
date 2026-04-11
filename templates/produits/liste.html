@@ -13,6 +13,14 @@
       <p class="text-sm text-gray-500 mt-0.5">{{ page_obj.paginator.count }} produit{{ page_obj.paginator.count|pluralize }} enregistré{{ page_obj.paginator.count|pluralize }}</p>
     </div>
     <div class="flex items-center gap-2">
+      <a href="{% url 'stock:inventaire_pdf' %}?search={{ search|default:'' }}&categorie={{ categorie_id|default:'' }}"
+         x-show="tab === 'produits'"
+         class="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2V7a2 2 0 00-2-2h-2M7 17H5a2 2 0 01-2-2V7a2 2 0 012-2h2m10 4H7m10 4H7m8 8l-4-4-4 4"/>
+        </svg>
+        Imprimer inventaire stock
+      </a>
       <template x-if="tab === 'categories'">
         {% if request.user.is_superuser or request.user.profilutilisateur.role == 'GERANT' %}
         <span></span><!-- placeholder, form inline dans le panel -->

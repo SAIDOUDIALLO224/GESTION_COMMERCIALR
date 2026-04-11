@@ -20,12 +20,12 @@
     {% load humanize %}
 
     <div class="header">
-        <h1>Inventaire de Stock</h1>
+        <h1>Inventaire Produits</h1>
         <p class="meta">Genere le {% now "d/m/Y \\a H:i" %}</p>
     </div>
 
     <div class="kpis">
-        <p><strong>Nombre de produits:</strong> {{ total_produits|intcomma }}</p>
+        <p><strong>Total produits:</strong> {{ produits|length|intcomma }}</p>
         {% if search %}<p><strong>Recherche:</strong> {{ search }}</p>{% endif %}
         {% if categorie_nom %}<p><strong>Categorie:</strong> {{ categorie_nom }}</p>{% endif %}
     </div>
@@ -36,10 +36,11 @@
                 <th>Code</th>
                 <th>Produit</th>
                 <th>Categorie</th>
-                <th class="right">Stock</th>
                 <th>Unite</th>
+                <th class="right">Stock</th>
+                <th class="right">Seuil</th>
                 <th class="right">Prix achat</th>
-                <th class="right">Valeur stock</th>
+                <th>Etat</th>
             </tr>
         </thead>
         <tbody>
@@ -48,13 +49,14 @@
                 <td>{{ produit.code }}</td>
                 <td>{{ produit.nom }}</td>
                 <td>{{ produit.categorie.nom }}</td>
-                <td class="right">{{ produit.stock_actuel|floatformat:"-3" }}</td>
                 <td>{{ produit.unite_mesure }}</td>
+                <td class="right">{{ produit.stock_actuel|floatformat:"-3" }}</td>
+                <td class="right">{{ produit.seuil_alerte|floatformat:"-3" }}</td>
                 <td class="right">{{ produit.prix_achat|floatformat:0|intcomma }}</td>
-                <td class="right">{{ produit.valeur_stock|floatformat:0|intcomma }}</td>
+                <td>{% if produit.en_alerte %}Alerte{% else %}OK{% endif %}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="7">Aucun produit en stock.</td></tr>
+            <tr><td colspan="8">Aucun produit.</td></tr>
             {% endfor %}
         </tbody>
     </table>

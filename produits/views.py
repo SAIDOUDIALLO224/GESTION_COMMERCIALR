@@ -4,8 +4,10 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from .models import Produit, Categorie
 from django import forms
+from weasyprint import HTML
 from utilisateurs.decorators import gerant_required
 
 
@@ -83,6 +85,35 @@ def liste_produits(request):
         return render(request, 'produits/partials/table.html', context)
 
     return render(request, 'produits/liste.html', context)
+
+
+@login_required
+def imprimer_produits(request):
+    search = request.GET.get('search', '')
+    categorie_id = request.GET.get('categorie', '')
+
+    produits = Produit.objects.select_related('categorie').all().order_by('nom')
+    if search:
+        produits = produits.filter(Q(nom__icontains=search) | Q(code__icontains=search))
+    if categorie_id:
+        produits = produits.filter(categorie_id=categorie_id)
+
+    categorie_nom = ''
+    if categorie_id:
+        categorie_nom = Categorie.objects.filter(pk=categorie_id).values_list('nom', flat=True).first() or ''
+
+    context = {
+        'produits': produits,
+        'search': search,
+        'categorie_nom': categorie_nom,
+    }
+
+    html_string = render_to_string('produits/pdf_inventaire.html', context)
+    pdf = HTML(string=html_string).write_pdf()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="inventaire_produits.pdf"'
+    return response
 
 
 @login_required

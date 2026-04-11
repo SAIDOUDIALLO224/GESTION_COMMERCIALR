@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import F, Sum, DecimalField, ExpressionWrapper
+from django.db.models import F, Q, Sum, DecimalField, ExpressionWrapper
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from .models import MouvementStock
@@ -116,6 +116,9 @@ def ajuster_stock(request):
 
 @login_required
 def imprimer_inventaire(request):
+    search = request.GET.get('search', '')
+    categorie_id = request.GET.get('categorie', '')
+
     produits = Produit.objects.select_related('categorie').annotate(
         valeur_stock=ExpressionWrapper(
             F('stock_actuel') * F('prix_achat'),
@@ -123,11 +126,23 @@ def imprimer_inventaire(request):
         )
     ).order_by('nom')
 
+    if search:
+        produits = produits.filter(Q(nom__icontains=search) | Q(code__icontains=search))
+    if categorie_id:
+        produits = produits.filter(categorie_id=categorie_id)
+
+    categorie_nom = ''
+    if categorie_id:
+        from produits.models import Categorie
+        categorie_nom = Categorie.objects.filter(pk=categorie_id).values_list('nom', flat=True).first() or ''
+
     context = {
         'produits': produits,
         'total_produits': produits.count(),
         'total_stock': produits.aggregate(total=Sum('stock_actuel'))['total'] or 0,
         'total_valeur': produits.aggregate(total=Sum('valeur_stock'))['total'] or 0,
+        'search': search,
+        'categorie_nom': categorie_nom,
     }
 
     html_string = render_to_string('stock/inventaire_pdf.html', context)
