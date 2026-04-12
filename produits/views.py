@@ -2,7 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum, DecimalField, Value
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from .models import Produit, Categorie
@@ -60,7 +61,12 @@ class CategorieForm(forms.ModelForm):
 def liste_produits(request):
     search = request.GET.get('search', '')
     categorie_id = request.GET.get('categorie', '')
-    produits = Produit.objects.select_related('categorie').all()
+    produits = Produit.objects.select_related('categorie').annotate(
+        quantite_vendue=Coalesce(
+            Sum('lignevente__quantite'),
+            Value(0, output_field=DecimalField(max_digits=12, decimal_places=3)),
+        ),
+    )
 
     if search:
         produits = produits.filter(Q(nom__icontains=search) | Q(code__icontains=search))
@@ -118,7 +124,15 @@ def imprimer_produits(request):
 
 @login_required
 def detail_produit(request, pk):
-    produit = get_object_or_404(Produit, pk=pk)
+    produit = get_object_or_404(
+        Produit.objects.select_related('categorie').annotate(
+            quantite_vendue=Coalesce(
+                Sum('lignevente__quantite'),
+                Value(0, output_field=DecimalField(max_digits=12, decimal_places=3)),
+            ),
+        ),
+        pk=pk,
+    )
     context = {'produit': produit}
     return render(request, 'produits/detail.html', context)
 

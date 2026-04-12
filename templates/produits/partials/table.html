@@ -8,8 +8,8 @@
         <th class="px-4 py-3 text-left font-semibold text-gray-600">Nom</th>
         <th class="px-4 py-3 text-left font-semibold text-gray-600">Catégorie</th>
         <th class="px-4 py-3 text-right font-semibold text-gray-600">Stock</th>
+        <th class="px-4 py-3 text-right font-semibold text-gray-600">Qté vendue</th>
         <th class="px-4 py-3 text-right font-semibold text-gray-600">Prix Gros</th>
-        <th class="px-4 py-3 text-right font-semibold text-gray-600">Prix Détail</th>
         <th class="px-4 py-3 text-center font-semibold text-gray-600">Statut</th>
         <th class="px-4 py-3 text-center font-semibold text-gray-600">Actions</th>
       </tr>
@@ -26,8 +26,8 @@
           </span>
           <span class="text-xs text-gray-400 ml-1">{{ produit.unite_mesure }}</span>
         </td>
+        <td class="px-4 py-3 text-right text-gray-700">{{ produit.quantite_vendue|floatformat:"-3" }}</td>
         <td class="px-4 py-3 text-right text-gray-700">{{ produit.prix_vente_gros|intcomma }} GNF</td>
-        <td class="px-4 py-3 text-right text-gray-700">{{ produit.prix_vente_detail|intcomma }} GNF</td>
         <td class="px-4 py-3 text-center">
           {% if not produit.actif %}
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Inactif</span>

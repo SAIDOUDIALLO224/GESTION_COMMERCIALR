@@ -70,7 +70,7 @@
 </div>
 
 <!-- Stats row -->
-<div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
     <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Stock actuel</p>
     <p class="mt-1 text-2xl font-bold {% if produit.en_alerte %}text-red-600{% else %}text-gray-900{% endif %}">
@@ -87,6 +87,11 @@
     <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Marge brute</p>
     <p class="mt-1 text-2xl font-bold text-gray-900">{{ produit.marge_brute|intcomma }}</p>
     <p class="text-xs text-gray-400">GNF / unité</p>
+  </div>
+  <div class="bg-white rounded-xl border border-blue-200 shadow-sm p-4">
+    <p class="text-xs text-blue-700 font-medium uppercase tracking-wide">Qté vendue</p>
+    <p class="mt-1 text-2xl font-bold text-blue-700">{{ produit.quantite_vendue|floatformat:"-3" }}</p>
+    <p class="text-xs text-blue-500">{{ produit.unite_mesure }}</p>
   </div>
   <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
     <p class="text-xs text-gray-500 font-medium uppercase tracking-wide">Taux de marge</p>
