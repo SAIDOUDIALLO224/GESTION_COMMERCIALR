@@ -23,6 +23,10 @@ class Client(models.Model):
         max_digits=14, decimal_places=2, default=0,
         verbose_name=_("Solde dû")
     )
+    credit_disponible = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0,
+        verbose_name=_("Crédit disponible")
+    )
     notes = models.TextField(blank=True, verbose_name=_("Notes"))
     actif = models.BooleanField(default=True, verbose_name=_("Actif"))
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Créé le"))

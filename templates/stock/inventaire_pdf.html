@@ -34,8 +34,8 @@
         <thead>
             <tr>
                 <th>Code</th>
-                <th>Produit</th>
                 <th>Categorie</th>
+                <th>Produit</th>
                 <th class="right">Stock</th>
                 <th>Unite</th>
                 <th class="right">Prix achat</th>
@@ -46,8 +46,8 @@
             {% for produit in produits %}
             <tr>
                 <td>{{ produit.code }}</td>
-                <td>{{ produit.nom }}</td>
                 <td>{{ produit.categorie.nom }}</td>
+                <td>{{ produit.nom }}</td>
                 <td class="right">{{ produit.stock_actuel|floatformat:"-3" }}</td>
                 <td>{{ produit.unite_mesure }}</td>
                 <td class="right">{{ produit.prix_achat|floatformat:0|intcomma }}</td>

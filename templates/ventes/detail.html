@@ -16,6 +16,9 @@
         <div>
             <h1 class="text-2xl font-bold text-gray-900">{{ vente.numero }}</h1>
             <p class="text-sm text-gray-500 mt-1">{{ vente.date_vente|date:"d/m/Y H:i" }} {% if vente.client %}• {{ vente.client.nom }}{% else %}• Vente anonyme{% endif %}</p>
+            {% if vente.client and vente.client.credit_disponible > 0 %}
+            <p class="text-xs text-cyan-700 mt-1">Crédit disponible client: {{ vente.client.credit_disponible|intcomma }} GNF</p>
+            {% endif %}
         </div>
         <div class="flex items-center gap-2">
             {% if vente.client and vente.solde_restant > 0 %}
@@ -90,7 +93,9 @@
                 <tr>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
                     <th class="px-4 py-3 text-right font-semibold text-gray-600">Montant</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Surplus</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">Mode</th>
+                    <th class="px-4 py-3 text-right font-semibold text-gray-600">Reçu</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-100">
@@ -98,7 +103,17 @@
                 <tr>
                     <td class="px-4 py-3 text-gray-600">{{ paiement.date_paiement|date:"d/m/Y H:i" }}</td>
                     <td class="px-4 py-3 text-right text-green-700 font-semibold">{{ paiement.montant|intcomma }} GNF</td>
+                    <td class="px-4 py-3 text-right">
+                        {% if paiement.surplus_effectif > 0 %}
+                            <span class="font-semibold text-cyan-700">{{ paiement.surplus_effectif|intcomma }} GNF</span>
+                        {% else %}
+                            <span class="text-gray-400">—</span>
+                        {% endif %}
+                    </td>
                     <td class="px-4 py-3 text-gray-700">{{ paiement.get_mode_paiement_display }}</td>
+                    <td class="px-4 py-3 text-right">
+                        <a href="{% url 'paiements:recu' paiement.pk %}" target="_blank" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">Imprimer</a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

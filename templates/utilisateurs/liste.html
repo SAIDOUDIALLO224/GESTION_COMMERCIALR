@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Utilisateurs - GesStock Madina{% endblock %}
+{% block page_title %}Utilisateurs{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-900">Gestion des utilisateurs</h2>
+        <p class="text-sm text-gray-500 mt-1">L'administrateur peut créer des comptes administrateurs et employés.</p>
+    </div>
+    <a href="{% url 'utilisateurs:creer' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        Nouvel utilisateur
+    </a>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+        <div class="md:col-span-4">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Recherche</label>
+            <input type="text" name="search" value="{{ search }}" placeholder="Username, nom ou email" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Statut</label>
+            <select name="statut" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="all" {% if statut == 'all' %}selected{% endif %}>Tous</option>
+                <option value="actif" {% if statut == 'actif' %}selected{% endif %}>Actifs</option>
+                <option value="inactif" {% if statut == 'inactif' %}selected{% endif %}>Inactifs</option>
+            </select>
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Type de compte</label>
+            <select name="type_compte" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="all" {% if type_compte == 'all' %}selected{% endif %}>Tous</option>
+                <option value="superadmin" {% if type_compte == 'superadmin' %}selected{% endif %}>Administrateur</option>
+                <option value="admin" {% if type_compte == 'admin' %}selected{% endif %}>Admin</option>
+                <option value="user" {% if type_compte == 'user' %}selected{% endif %}>Standard</option>
+            </select>
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Rôle métier</label>
+            <select name="role" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="all" {% if role == 'all' %}selected{% endif %}>Tous</option>
+                <option value="GERANT" {% if role == 'GERANT' %}selected{% endif %}>Gérant</option>
+                <option value="EMPLOYE" {% if role == 'EMPLOYE' %}selected{% endif %}>Employé</option>
+            </select>
+        </div>
+        <div class="md:col-span-2 flex gap-2">
+            <button type="submit" class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">Filtrer</button>
+            <a href="{% url 'utilisateurs:liste' %}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200 text-sm">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Utilisateur</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Nom complet</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Rôle</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Type compte</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">État</th>
+                    <th class="px-4 py-3 text-center font-semibold text-gray-600">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                {% for item in lignes %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ item.user.username }}</td>
+                    <td class="px-4 py-3 text-gray-700">{{ item.user.get_full_name|default:'—' }}</td>
+                    <td class="px-4 py-3 text-gray-700">
+                        {% if item.user.is_superuser %}
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-fuchsia-100 text-fuchsia-700">Administrateur</span>
+                        {% elif item.profil %}
+                            {{ item.profil.get_role_display }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if item.user.is_superuser %}
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-fuchsia-100 text-fuchsia-700">Administrateur</span>
+                        {% elif item.user.is_staff %}
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Admin</span>
+                        {% else %}
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">Standard</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        {% if item.user.is_active %}
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Actif</span>
+                        {% else %}
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Inactif</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            <a href="{% url 'utilisateurs:modifier' item.user.pk %}" class="p-1.5 rounded text-amber-600 hover:bg-amber-50 transition-colors" title="Modifier">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                            </a>
+                            {% if not item.user.is_superuser %}
+                            <form method="post" action="{% url 'utilisateurs:toggle_actif' item.user.pk %}" class="inline-block">
+                                {% csrf_token %}
+                                <button type="submit" class="p-1.5 rounded {% if item.user.is_active %}text-orange-600 hover:bg-orange-50{% else %}text-green-600 hover:bg-green-50{% endif %} transition-colors" title="{% if item.user.is_active %}Désactiver{% else %}Activer{% endif %}">
+                                    {% if item.user.is_active %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m-7 4h10a2 2 0 002-2V7a2 2 0 00-2-2h-1l-1-1h-6l-1 1H7a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                    {% else %}
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    {% endif %}
+                                </button>
+                            </form>
+                            <form method="post" action="{% url 'utilisateurs:supprimer' item.user.pk %}" onsubmit="return confirm('Supprimer cet utilisateur ? Cette action est irreversible.');" class="inline-block">
+                                {% csrf_token %}
+                                <button type="submit" class="p-1.5 rounded text-red-600 hover:bg-red-50 transition-colors" title="Supprimer">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0h8m-9 0V5a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-4 py-10 text-center text-gray-400">Aucun utilisateur trouvé.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="px-4 py-3 border-t border-gray-200 flex items-center justify-between text-sm">
+        <p class="text-gray-500">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</p>
+        <div class="flex items-center gap-2">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}&search={{ search }}&statut={{ statut }}&type_compte={{ type_compte }}&role={{ role }}" class="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Précédent</a>
+            {% endif %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&search={{ search }}&statut={{ statut }}&type_compte={{ type_compte }}&role={{ role }}" class="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Suivant</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

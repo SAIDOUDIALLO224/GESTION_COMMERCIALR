@@ -16,7 +16,6 @@
         <div>
             <div class="flex items-center gap-2 flex-wrap">
                 <h1 class="text-2xl font-bold text-gray-900">{{ client.nom }}</h1>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">{{ client.get_type_client_display }}</span>
                 {% if client.actif %}
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Actif</span>
                 {% else %}
@@ -24,7 +23,7 @@
                 {% endif %}
             </div>
             <p class="text-sm text-gray-500 mt-1">{{ client.telephone }} {% if client.telephone2 %}• {{ client.telephone2 }}{% endif %}</p>
-            <p class="text-sm text-gray-500">{{ client.quartier|default:'Quartier non renseigné' }}</p>
+            <p class="text-sm text-gray-500">{{ client.quartier|default:'Adresse non renseignée' }}</p>
         </div>
         <div class="flex items-center gap-2">
             <!-- {% if ventes_a_encaisser %}
@@ -41,7 +40,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         <div class="rounded-lg border border-gray-200 p-4">
             <p class="text-xs uppercase tracking-wide font-semibold text-gray-500">Solde dû</p>
             <p class="mt-1 text-2xl font-bold {% if client.solde_du > 0 %}text-red-700{% else %}text-green-700{% endif %}">{{ client.solde_du|intcomma }}</p>
@@ -57,7 +56,18 @@
             <p class="mt-1 text-2xl font-bold text-green-700">{{ total_paye|intcomma }}</p>
             <p class="text-xs text-gray-400">GNF</p>
         </div>
+        <div class="rounded-lg border border-cyan-200 p-4">
+            <p class="text-xs uppercase tracking-wide font-semibold text-cyan-700">Crédit disponible</p>
+            <p class="mt-1 text-2xl font-bold text-cyan-700">{{ client.credit_disponible|intcomma }}</p>
+            <p class="text-xs text-cyan-500">GNF</p>
+        </div>
     </div>
+
+    {% if total_surplus > 0 %}
+    <div class="mt-4 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-800">
+        Total des trop-payes enregistres pour ce client: <span class="font-semibold">{{ total_surplus|intcomma }} GNF</span>
+    </div>
+    {% endif %}
 
     {% if client.notes %}
     <div class="mt-5 p-4 rounded-lg bg-gray-50 border border-gray-200">
@@ -130,8 +140,10 @@
                     <tr>
                         <th class="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
                         <th class="px-4 py-3 text-right font-semibold text-gray-600">Montant</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-600">Surplus</th>
                         <th class="px-4 py-3 text-left font-semibold text-gray-600">Mode</th>
                         <th class="px-4 py-3 text-left font-semibold text-gray-600">Référence</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-600">Reçu</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
@@ -139,8 +151,18 @@
                     <tr>
                         <td class="px-4 py-3 text-gray-600">{{ paiement.date_paiement|date:"d/m/Y H:i" }}</td>
                         <td class="px-4 py-3 text-right font-semibold text-green-700">{{ paiement.montant|intcomma }} GNF</td>
+                        <td class="px-4 py-3 text-right">
+                            {% if paiement.surplus_effectif > 0 %}
+                                <span class="font-semibold text-cyan-700">{{ paiement.surplus_effectif|intcomma }} GNF</span>
+                            {% else %}
+                                <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
                         <td class="px-4 py-3 text-gray-700">{{ paiement.get_mode_paiement_display }}</td>
                         <td class="px-4 py-3 text-gray-500">{{ paiement.reference|default:'—' }}</td>
+                        <td class="px-4 py-3 text-right">
+                            <a href="{% url 'paiements:recu' paiement.pk %}" target="_blank" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">Imprimer</a>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

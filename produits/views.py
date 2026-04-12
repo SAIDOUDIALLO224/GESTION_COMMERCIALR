@@ -149,7 +149,11 @@ def creer_produit(request):
     else:
         form = ProduitForm()
 
-    context = {'form': form, 'title': 'Créer un produit'}
+    context = {
+        'form': form,
+        'title': 'Créer un produit',
+        'has_categories': Categorie.objects.exists(),
+    }
     return render(request, 'produits/form.html', context)
 
 
@@ -166,7 +170,12 @@ def modifier_produit(request, pk):
     else:
         form = ProduitForm(instance=produit)
 
-    context = {'form': form, 'produit': produit, 'title': 'Modifier le produit'}
+    context = {
+        'form': form,
+        'produit': produit,
+        'title': 'Modifier le produit',
+        'has_categories': Categorie.objects.exists(),
+    }
     return render(request, 'produits/form.html', context)
 
 

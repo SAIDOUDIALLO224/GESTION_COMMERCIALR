@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #222; font-size: 12px; }
+        .wrapper { border: 1px solid #dbe3f0; border-radius: 8px; padding: 18px; }
+        .header { text-align: center; border-bottom: 2px solid #1e40af; padding-bottom: 10px; margin-bottom: 16px; }
+        .header h1 { margin: 0; color: #1e40af; font-size: 22px; }
+        .muted { color: #6b7280; font-size: 11px; }
+        .line { margin: 6px 0; }
+        .label { color: #4b5563; }
+        .value { font-weight: bold; color: #111827; }
+        .amount { margin: 14px 0; padding: 10px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: 6px; }
+        .amount .big { font-size: 24px; font-weight: 700; }
+        .grid { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .grid td { padding: 6px 0; vertical-align: top; }
+        .signatures { margin-top: 40px; width: 100%; border-collapse: collapse; }
+        .signatures td { width: 50%; text-align: center; padding-top: 28px; }
+        .sign-line { border-top: 1px solid #9ca3af; margin: 0 40px 6px 40px; }
+        .footer { margin-top: 14px; text-align: center; color: #6b7280; font-size: 11px; }
+    </style>
+</head>
+<body>
+    {% load humanize %}
+    <div class="wrapper">
+        <div class="header">
+            <h1>Reçu de Paiement</h1>
+            <p class="muted">N° Reçu: REC-{{ paiement.id }} • Émis le {% now "d/m/Y à H:i" %}</p>
+        </div>
+
+        <table class="grid">
+            <tr>
+                <td class="label">Client :</td>
+                <td class="value">{{ paiement.client.nom|default:"Client non renseigné" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Téléphone :</td>
+                <td class="value">{{ paiement.client.telephone|default:"—" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Vente :</td>
+                <td class="value">{{ paiement.vente.numero|default:"—" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Date paiement :</td>
+                <td class="value">{{ paiement.date_paiement|date:"d/m/Y H:i" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Mode de paiement :</td>
+                <td class="value">{{ paiement.get_mode_paiement_display }}</td>
+            </tr>
+            <tr>
+                <td class="label">Référence :</td>
+                <td class="value">{{ paiement.reference|default:"—" }}</td>
+            </tr>
+            {% if paiement.surplus_effectif > 0 %}
+            <tr>
+                <td class="label">Montant surplus :</td>
+                <td class="value">{{ paiement.surplus_effectif|floatformat:0|intcomma }} GNF - L'entreprise vous doit ce montant.</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <td class="label">Enregistré par :</td>
+                <td class="value">{{ paiement.utilisateur.username|default:"—" }}</td>
+            </tr>
+        </table>
+
+        <div class="amount">
+            <div class="label">Montant encaissé</div>
+            <div class="big">{{ paiement.montant|floatformat:0|intcomma }} GNF</div>
+        </div>
+
+        <table class="signatures">
+            <tr>
+                <td>
+                    <div class="sign-line"></div>
+                    <div class="muted">Signature Client</div>
+                </td>
+                <td>
+                    <div class="sign-line"></div>
+                    <div class="muted">Signature Caissier</div>
+                </td>
+            </tr>
+        </table>
+
+        <div class="footer">Ce document certifie l'encaissement du montant indiqué.</div>
+    </div>
+</body>
+</html>

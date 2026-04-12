@@ -106,3 +106,16 @@ def modifier_fournisseur(request, pk):
 		'title': 'Modifier le fournisseur'
 	}
 	return render(request, 'fournisseurs/form.html', context)
+
+
+@login_required
+def supprimer_fournisseur(request, pk):
+	if request.method != 'POST':
+		messages.error(request, 'Methode non autorisee.')
+		return redirect('fournisseurs:liste')
+
+	fournisseur = get_object_or_404(Fournisseur, pk=pk)
+	nom = fournisseur.nom
+	fournisseur.delete()
+	messages.success(request, f'Fournisseur « {nom} » supprime avec succes.')
+	return redirect('fournisseurs:liste')

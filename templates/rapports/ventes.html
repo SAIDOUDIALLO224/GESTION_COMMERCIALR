@@ -115,6 +115,12 @@
     const graphTotaux = JSON.parse(document.getElementById('graph-totaux').textContent);
     const graphStatutLabels = JSON.parse(document.getElementById('graph-statut-labels').textContent);
     const graphStatutValues = JSON.parse(document.getElementById('graph-statut-values').textContent);
+    const graphStatutColors = graphStatutLabels.map((label) => {
+        const normalized = String(label || '').toLowerCase();
+        if (normalized.includes('sold')) return '#16a34a';
+        if (normalized.includes('partiel')) return '#d97706';
+        return '#64748b';
+    });
 
     const moneyFmt = (v) => Math.round(v).toLocaleString('fr-FR') + ' GNF';
 
@@ -159,7 +165,7 @@
             labels: graphStatutLabels,
             datasets: [{
                 data: graphStatutValues,
-                backgroundColor: ['#16a34a', '#d97706', '#64748b'],
+                backgroundColor: graphStatutColors,
                 borderWidth: 0,
             }]
         },

@@ -5,8 +5,8 @@
     <thead class="bg-gray-50">
       <tr>
         <th class="px-4 py-3 text-left font-semibold text-gray-600">Code</th>
-        <th class="px-4 py-3 text-left font-semibold text-gray-600">Nom</th>
         <th class="px-4 py-3 text-left font-semibold text-gray-600">Catégorie</th>
+        <th class="px-4 py-3 text-left font-semibold text-gray-600">Nom</th>
         <th class="px-4 py-3 text-right font-semibold text-gray-600">Stock</th>
         <th class="px-4 py-3 text-right font-semibold text-gray-600">Qté vendue</th>
         <th class="px-4 py-3 text-right font-semibold text-gray-600">Prix Gros</th>
@@ -18,8 +18,8 @@
       {% for produit in produits %}
       <tr class="hover:bg-gray-50 transition-colors">
         <td class="px-4 py-3 font-mono font-semibold text-blue-700">{{ produit.code }}</td>
-        <td class="px-4 py-3 font-medium text-gray-900">{{ produit.nom }}</td>
         <td class="px-4 py-3 text-gray-600">{{ produit.categorie.nom|default:"—" }}</td>
+        <td class="px-4 py-3 font-medium text-gray-900">{{ produit.nom }}</td>
         <td class="px-4 py-3 text-right">
           <span class="font-semibold {% if produit.en_alerte %}text-red-600{% else %}text-gray-900{% endif %}">
             {{ produit.stock_actuel|floatformat:"-3" }}

@@ -129,13 +129,16 @@ def nouvelle_vente(request):
                 
                 # Mettre à jour la vente
                 vente.montant_total = montant_total
-                montant_paye = form.cleaned_data.get('montant_paye') or Decimal('0')
-                vente.montant_paye = montant_paye
-                vente.solde_restant = montant_total - montant_paye
+                montant_paye_saisi = form.cleaned_data.get('montant_paye') or Decimal('0')
+                montant_applique = min(montant_paye_saisi, montant_total)
+                surplus = max(Decimal('0'), montant_paye_saisi - montant_total)
+
+                vente.montant_paye = montant_applique
+                vente.solde_restant = max(Decimal('0'), montant_total - montant_applique)
                 
-                if montant_paye >= montant_total:
+                if montant_applique >= montant_total:
                     vente.statut = 'SOLDE'
-                elif montant_paye > 0:
+                elif montant_applique > 0:
                     vente.statut = 'PARTIEL'
                 else:
                     vente.statut = 'EN_ATTENTE'
@@ -143,11 +146,12 @@ def nouvelle_vente(request):
                 vente.save()
                 
                 # Créer le paiement uniquement si la vente est rattachée a un client.
-                if montant_paye > 0 and vente.client:
+                if montant_paye_saisi > 0 and vente.client:
                     Paiement.objects.create(
                         vente=vente,
                         client=vente.client,
-                        montant=montant_paye,
+                        montant=montant_paye_saisi,
+                        montant_surplus=surplus,
                         mode_paiement=form.cleaned_data['mode_paiement'],
                         utilisateur=request.user
                     )
@@ -155,9 +159,17 @@ def nouvelle_vente(request):
                 # Mettre à jour le solde du client
                 if vente.client:
                     vente.client.solde_du += vente.solde_restant
+                    if surplus > 0:
+                        vente.client.credit_disponible += surplus
                     vente.client.save()
                 
-                messages.success(request, 'Vente créée avec succès!')
+                if surplus > 0 and vente.client:
+                    messages.success(
+                        request,
+                        f'Vente creee avec succes. Surplus de {surplus} GNF: l\'entreprise vous doit ce montant.'
+                    )
+                else:
+                    messages.success(request, 'Vente créée avec succès!')
                 return redirect('ventes:detail', pk=vente.pk)
     else:
         form = VenteForm()
@@ -201,30 +213,41 @@ def encaisser_paiement(request, pk):
         if form.is_valid():
             montant = form.cleaned_data['montant']
 
-            if montant > vente.solde_restant:
-                form.add_error('montant', f"Le montant ne peut pas depasser le reste a payer ({vente.solde_restant} GNF).")
-            else:
-                with transaction.atomic():
-                    Paiement.objects.create(
-                        vente=vente,
-                        client=vente.client,
-                        montant=montant,
-                        mode_paiement=form.cleaned_data['mode_paiement'],
-                        reference=form.cleaned_data.get('reference', ''),
-                        notes=form.cleaned_data.get('notes', ''),
-                        utilisateur=request.user
-                    )
+            with transaction.atomic():
+                montant_applique = min(montant, vente.solde_restant)
+                surplus = max(Decimal('0'), montant - montant_applique)
 
-                    vente.montant_paye += montant
-                    vente.solde_restant = max(Decimal('0'), vente.montant_total - vente.montant_paye)
-                    vente.statut = 'SOLDE' if vente.solde_restant == 0 else 'PARTIEL'
-                    vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+                Paiement.objects.create(
+                    vente=vente,
+                    client=vente.client,
+                    montant=montant,
+                    montant_surplus=surplus,
+                    mode_paiement=form.cleaned_data['mode_paiement'],
+                    reference=form.cleaned_data.get('reference', ''),
+                    notes=form.cleaned_data.get('notes', ''),
+                    utilisateur=request.user
+                )
 
-                    vente.client.solde_du = max(Decimal('0'), vente.client.solde_du - montant)
+                vente.montant_paye = min(vente.montant_total, vente.montant_paye + montant_applique)
+                vente.solde_restant = max(Decimal('0'), vente.montant_total - vente.montant_paye)
+                vente.statut = 'SOLDE' if vente.solde_restant == 0 else 'PARTIEL'
+                vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+
+                vente.client.solde_du = max(Decimal('0'), vente.client.solde_du - montant_applique)
+                if surplus > 0:
+                    vente.client.credit_disponible += surplus
+                    vente.client.save(update_fields=['solde_du', 'credit_disponible'])
+                else:
                     vente.client.save(update_fields=['solde_du'])
 
+            if surplus > 0:
+                messages.success(
+                    request,
+                    f'Paiement enregistre: {montant} GNF. Surplus de {surplus} GNF: l\'entreprise vous doit ce montant.'
+                )
+            else:
                 messages.success(request, f'Paiement enregistre: {montant} GNF pour la vente {vente.numero}.')
-                return redirect('ventes:detail', pk=vente.pk)
+            return redirect('ventes:detail', pk=vente.pk)
     else:
         form = EncaissementForm(initial={'mode_paiement': 'ESPECES'})
 
@@ -233,6 +256,31 @@ def encaisser_paiement(request, pk):
         'form': form,
     }
     return render(request, 'ventes/paiement.html', context)
+
+
+@login_required
+def supprimer_vente(request, pk):
+    if request.method != 'POST':
+        messages.error(request, 'Methode non autorisee.')
+        return redirect('ventes:liste')
+
+    vente = get_object_or_404(Vente.objects.select_related('client'), pk=pk)
+
+    with transaction.atomic():
+        for ligne in vente.lignes.select_related('produit'):
+            produit = ligne.produit
+            produit.stock_actuel += ligne.quantite
+            produit.save(update_fields=['stock_actuel'])
+
+        if vente.client and vente.solde_restant > 0:
+            vente.client.solde_du = max(Decimal('0'), vente.client.solde_du - vente.solde_restant)
+            vente.client.save(update_fields=['solde_du'])
+
+        numero_vente = vente.numero
+        vente.delete()
+
+    messages.success(request, f'Vente {numero_vente} supprimee avec succes.')
+    return redirect('ventes:liste')
 
 
 @login_required

@@ -1,13 +1,12 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block title %}Clients - GesStock Madina{% endblock %}
-{% block page_title %}Clients{% endblock %}
+{% block title %}Liste des clients - GesStock Madina{% endblock %}
+{% block page_title %}Liste des clients{% endblock %}
 
 {% block content %}
 <div class="flex items-center justify-between mb-6">
     <div>
-        <h1 class="text-2xl font-bold text-gray-900">Portefeuille clients</h1>
         <p class="text-sm text-gray-500 mt-1">Suivi des profils, soldes et historiques d'achat.</p>
     </div>
     <a href="{% url 'clients:creer' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
@@ -16,7 +15,7 @@
     </a>
 </div>
 
-<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
+<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
         <p class="text-xs uppercase tracking-wide font-semibold text-gray-500">Total clients</p>
         <p class="mt-1 text-2xl font-bold text-gray-900">{{ total_clients|intcomma }}</p>
@@ -25,10 +24,20 @@
         <p class="text-xs uppercase tracking-wide font-semibold text-green-700">Clients actifs</p>
         <p class="mt-1 text-2xl font-bold text-green-700">{{ clients_actifs|intcomma }}</p>
     </div>
+    <div class="bg-white rounded-xl border border-emerald-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-emerald-700">Solde total soldé</p>
+        <p class="mt-1 text-2xl font-bold text-emerald-700">{{ total_solde_solde|intcomma }}</p>
+        <p class="text-xs text-emerald-500">GNF</p>
+    </div>
     <div class="bg-white rounded-xl border border-red-200 shadow-sm p-4">
         <p class="text-xs uppercase tracking-wide font-semibold text-red-700">Solde total dû</p>
         <p class="mt-1 text-2xl font-bold text-red-700">{{ total_solde_du|intcomma }}</p>
         <p class="text-xs text-red-500">GNF</p>
+    </div>
+    <div class="bg-white rounded-xl border border-cyan-200 shadow-sm p-4">
+        <p class="text-xs uppercase tracking-wide font-semibold text-cyan-700">Crédit clients</p>
+        <p class="mt-1 text-2xl font-bold text-cyan-700">{{ total_credit|intcomma }}</p>
+        <p class="text-xs text-cyan-500">GNF</p>
     </div>
 </div>
 
@@ -40,15 +49,18 @@
 </div>
 
 <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="px-5 py-4 border-b border-gray-200 bg-gray-50 text-center">
+        <h2 class="text-lg font-semibold text-gray-900">Liste des clients</h2>
+    </div>
     {% if clients %}
     <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 text-sm">
             <thead class="bg-gray-50">
                 <tr>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">N°</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">Client</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">Téléphone</th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Type</th>
-                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Quartier</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Adresse</th>
                     <th class="px-4 py-3 text-right font-semibold text-gray-600">Solde dû</th>
                     <th class="px-4 py-3 text-center font-semibold text-gray-600">Actions</th>
                 </tr>
@@ -56,18 +68,18 @@
             <tbody class="bg-white divide-y divide-gray-100">
                 {% for client in clients %}
                 <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-500">{{ page_obj.start_index|add:forloop.counter0 }}</td>
                     <td class="px-4 py-3">
                         <p class="font-medium text-gray-900">{{ client.nom }}</p>
                         <p class="text-xs text-gray-500 mt-0.5">Créé le {{ client.created_at|date:"d/m/Y" }}</p>
                     </td>
                     <td class="px-4 py-3 text-gray-700">{{ client.telephone }}</td>
-                    <td class="px-4 py-3">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">{{ client.get_type_client_display }}</span>
-                    </td>
                     <td class="px-4 py-3 text-gray-600">{{ client.quartier|default:"—" }}</td>
                     <td class="px-4 py-3 text-right">
                         {% if client.solde_du > 0 %}
                             <span class="font-semibold text-red-700">{{ client.solde_du|intcomma }} GNF</span>
+                        {% elif client.credit_disponible > 0 %}
+                            <span class="font-semibold text-cyan-700">Crédit: {{ client.credit_disponible|intcomma }} GNF</span>
                         {% else %}
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Soldé</span>
                         {% endif %}
@@ -80,6 +92,12 @@
                             <a href="{% url 'clients:modifier' client.pk %}" class="p-1.5 rounded text-orange-500 hover:bg-orange-50 transition-colors" title="Modifier">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                             </a>
+                            <form method="post" action="{% url 'clients:supprimer' client.pk %}" onsubmit="return confirm('Supprimer le client {{ client.nom }} ?');">
+                                {% csrf_token %}
+                                <button type="submit" class="p-1.5 rounded text-red-500 hover:bg-red-50 transition-colors" title="Supprimer">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </form>
                         </div>
                     </td>
                 </tr>

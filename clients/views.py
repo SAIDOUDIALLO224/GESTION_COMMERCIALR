@@ -10,15 +10,18 @@ from django import forms
 
 
 class ClientForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['quartier'].label = 'Adresse'
+
     class Meta:
         model = Client
-        fields = ['nom', 'telephone', 'telephone2', 'quartier', 'type_client', 'notes', 'actif']
+        fields = ['nom', 'telephone', 'telephone2', 'quartier', 'notes', 'actif']
         widgets = {
             'nom': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', 'placeholder': 'Nom complet'}),
             'telephone': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', 'placeholder': '+224...'}),
             'telephone2': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', 'placeholder': 'Optionnel'}),
-            'quartier': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', 'placeholder': 'Quartier/Adresse'}),
-            'type_client': forms.Select(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'}),
+            'quartier': forms.TextInput(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', 'placeholder': 'Adresse'}),
             'notes': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', 'rows': 3}),
             'actif': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-blue-600 border-gray-300 rounded'}),
         }
@@ -38,7 +41,11 @@ def liste_clients(request):
 
     total_clients = Client.objects.count()
     clients_actifs = Client.objects.filter(actif=True).count()
+    total_solde_solde = Vente.objects.filter(client__isnull=False, statut='SOLDE').aggregate(
+        total=Sum('montant_total')
+    )['total'] or 0
     total_solde_du = Client.objects.aggregate(total=Sum('solde_du'))['total'] or 0
+    total_credit = Client.objects.aggregate(total=Sum('credit_disponible'))['total'] or 0
     
     context = {
         'clients': page_obj.object_list,
@@ -46,7 +53,9 @@ def liste_clients(request):
         'search': search,
         'total_clients': total_clients,
         'clients_actifs': clients_actifs,
+        'total_solde_solde': total_solde_solde,
         'total_solde_du': total_solde_du,
+        'total_credit': total_credit,
     }
     return render(request, 'clients/liste.html', context)
 
@@ -60,6 +69,7 @@ def detail_client(request, pk):
 
     total_ventes = ventes.aggregate(total=Sum('montant_total'))['total'] or 0
     total_paye = ventes.aggregate(total=Sum('montant_paye'))['total'] or 0
+    total_surplus = paiements.aggregate(total=Sum('montant_surplus'))['total'] or 0
     
     context = {
         'client': client,
@@ -68,6 +78,7 @@ def detail_client(request, pk):
         'paiements': paiements,
         'total_ventes': total_ventes,
         'total_paye': total_paye,
+        'total_surplus': total_surplus,
     }
     return render(request, 'clients/detail.html', context)
 
@@ -101,3 +112,13 @@ def modifier_client(request, pk):
     
     context = {'form': form, 'client': client, 'title': 'Modifier le client'}
     return render(request, 'clients/form.html', context)
+
+
+@login_required
+def supprimer_client(request, pk):
+    client = get_object_or_404(Client, pk=pk)
+    if request.method == 'POST':
+        nom = client.nom
+        client.delete()
+        messages.success(request, f'Client "{nom}" supprimé.')
+    return redirect('clients:liste')

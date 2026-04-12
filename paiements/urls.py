@@ -4,5 +4,5 @@ from . import views
 app_name = 'paiements'
 
 urlpatterns = [
-    # À compléter
+    path('<int:pk>/recu/', views.imprimer_recu, name='recu'),
 ]

@@ -23,6 +23,7 @@
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.montant.label }}</label>
                 {{ form.montant }}
+                <p class="text-xs text-cyan-700 mt-1">Si le montant dépasse le reste à payer, l'excédent sera enregistré en crédit client.</p>
                 {% if form.montant.errors %}<p class="text-sm text-red-600 mt-1">{{ form.montant.errors.0 }}</p>{% endif %}
             </div>
 
@@ -82,6 +83,10 @@
             <div class="pt-3 border-t border-gray-200 flex items-start justify-between gap-3">
                 <span class="text-gray-700 font-medium">Reste à payer</span>
                 <span class="font-bold text-red-700">{{ vente.solde_restant|intcomma }} GNF</span>
+            </div>
+            <div class="flex items-start justify-between gap-3">
+                <span class="text-gray-500">Crédit client actuel</span>
+                <span class="font-semibold text-cyan-700">{{ vente.client.credit_disponible|intcomma }} GNF</span>
             </div>
         </div>
     </div>

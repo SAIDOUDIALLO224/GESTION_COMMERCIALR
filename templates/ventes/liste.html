@@ -80,6 +80,12 @@
                             <a href="{% url 'factures:pdf' vente.pk %}" class="p-1.5 rounded text-green-600 hover:bg-green-50 transition-colors" title="PDF">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v8m0 0l3-3m-3 3l-3-3m9 4H6a2 2 0 01-2-2V7a2 2 0 012-2h3.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V17a2 2 0 01-2 2z"/></svg>
                             </a>
+                            <form method="post" action="{% url 'ventes:supprimer' vente.pk %}" onsubmit="return confirm('Supprimer cette vente ? Cette action est irreversible.');" class="inline-block">
+                                {% csrf_token %}
+                                <button type="submit" class="p-1.5 rounded text-red-600 hover:bg-red-50 transition-colors" title="Supprimer">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0h8m-9 0V5a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                                </button>
+                            </form>
                         </div>
                     </td>
                 </tr>
