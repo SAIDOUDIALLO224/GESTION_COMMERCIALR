@@ -31,11 +31,7 @@ class Produit(models.Model):
     )
     prix_vente_gros = models.DecimalField(
         max_digits=12, decimal_places=2, validators=[MinValueValidator(0)],
-        verbose_name=_("Prix de vente gros")
-    )
-    prix_vente_detail = models.DecimalField(
-        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)],
-        verbose_name=_("Prix de vente détail")
+        verbose_name=_("Prix de vente")
     )
     
     stock_actuel = models.DecimalField(

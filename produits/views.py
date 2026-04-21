@@ -2,11 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, Count, Sum, DecimalField, Value
-from django.db.models.functions import Coalesce
+from django.db.models import Q, Count, Sum, DecimalField, Value, F, Case, When, Max
+from django.db.models.functions import Coalesce, Greatest
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from .models import Produit, Categorie
+from stock.models import MouvementStock
 from django import forms
 from weasyprint import HTML
 from utilisateurs.decorators import gerant_required
@@ -23,7 +24,7 @@ class ProduitForm(forms.ModelForm):
     class Meta:
         model = Produit
         fields = ['code', 'nom', 'categorie', 'unite_mesure', 'prix_achat',
-                  'prix_vente_gros', 'prix_vente_detail', 'stock_actuel', 'seuil_alerte', 'photo', 'actif']
+                  'prix_vente_gros', 'stock_actuel', 'seuil_alerte', 'photo', 'actif']
         widgets = {
             'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: RIZ001'}),
             'nom': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom du produit'}),
@@ -31,7 +32,6 @@ class ProduitForm(forms.ModelForm):
             'unite_mesure': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'sac, carton, litre...'}),
             'prix_achat': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'prix_vente_gros': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'prix_vente_detail': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'stock_actuel': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
             'seuil_alerte': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
             'photo': forms.FileInput(attrs={'class': 'form-control'}),
@@ -98,11 +98,28 @@ def imprimer_produits(request):
     search = request.GET.get('search', '')
     categorie_id = request.GET.get('categorie', '')
 
-    produits = Produit.objects.select_related('categorie').all().order_by('nom')
+    produits = Produit.objects.select_related('categorie').order_by('nom')
+    
     if search:
         produits = produits.filter(Q(nom__icontains=search) | Q(code__icontains=search))
     if categorie_id:
         produits = produits.filter(categorie_id=categorie_id)
+
+    produits = list(produits)
+
+    # Calculer les valeurs de stock et la date de dernière vente
+    for produit in produits:
+        quantite_vendue = MouvementStock.objects.filter(
+            produit=produit,
+            type_mvt='SORTIE'
+        ).aggregate(
+            total=Coalesce(Sum('quantite'), Value(0, output_field=DecimalField(max_digits=12, decimal_places=3)))
+        )['total']
+        
+        # Stock initial = stock actuel + quantité vendue (reconstitution)
+        produit.stock_initial = produit.stock_actuel + quantite_vendue
+        produit.stock_actuel_pdf = produit.stock_actuel
+        produit.quantite_vendue = quantite_vendue
 
     categorie_nom = ''
     if categorie_id:
@@ -144,8 +161,12 @@ def creer_produit(request):
         form = ProduitForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Produit créé avec succès!')
-            return redirect('produits:liste')
+            if request.headers.get('HX-Request'):
+                messages.success(request, 'Produit créé avec succès!')
+                return render(request, 'partials/modal_success.html', {'redirect_url': 'javascript:location.reload()'})
+            else:
+                messages.success(request, 'Produit créé avec succès!')
+                return redirect('produits:liste')
     else:
         form = ProduitForm()
 
@@ -154,6 +175,10 @@ def creer_produit(request):
         'title': 'Créer un produit',
         'has_categories': Categorie.objects.exists(),
     }
+    
+    if request.headers.get('HX-Request'):
+        return render(request, 'partials/modal_form.html', context)
+    
     return render(request, 'produits/form.html', context)
 
 

@@ -8,9 +8,13 @@ from .models import Vente, LigneVente
 from produits.models import Produit
 from clients.models import Client
 from paiements.models import Paiement
+from stock.models import MouvementStock
 from django import forms
 from decimal import Decimal
 import uuid
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from weasyprint import HTML
 
 
 class VenteForm(forms.Form):
@@ -112,12 +116,22 @@ def nouvelle_vente(request):
                         vente.delete()
                         return redirect('ventes:nouvelle')
                     
-                    sous_total = quantite * produit.prix_vente_gros
+                    # Utiliser uniquement le prix de vente gros
+                    prix_unitaire = produit.prix_vente_gros
+                    
+                    # Si le prix est 0, erreur
+                    if prix_unitaire == 0:
+                        messages.error(request, f'Prix non défini pour {produit.nom}. Veuillez définir un prix de vente.')
+                        vente.delete()
+                        return redirect('ventes:nouvelle')
+                    
+                    sous_total = quantite * prix_unitaire
+                    
                     LigneVente.objects.create(
                         vente=vente,
                         produit=produit,
                         quantite=quantite,
-                        prix_unitaire=produit.prix_vente_gros,
+                        prix_unitaire=prix_unitaire,
                         sous_total=sous_total
                     )
                     
@@ -125,7 +139,18 @@ def nouvelle_vente(request):
                     produit.stock_actuel -= quantite
                     produit.save()
                     
+                    # Créer un mouvement de stock (SORTIE pour la vente)
+                    MouvementStock.objects.create(
+                        produit=produit,
+                        type_mvt='SORTIE',
+                        quantite=quantite,
+                        motif=f'Vente {vente.numero}',
+                        utilisateur=request.user
+                    )
+                    
                     montant_total += sous_total
+                
+                print(f"Montant total final: {montant_total}")
                 
                 # Mettre à jour la vente
                 vente.montant_total = montant_total
@@ -135,6 +160,8 @@ def nouvelle_vente(request):
 
                 vente.montant_paye = montant_applique
                 vente.solde_restant = max(Decimal('0'), montant_total - montant_applique)
+                
+                print(f"Vente mise à jour: total={vente.montant_total}, payé={vente.montant_paye}, restant={vente.solde_restant}")
                 
                 if montant_applique >= montant_total:
                     vente.statut = 'SOLDE'
@@ -239,6 +266,11 @@ def encaisser_paiement(request, pk):
                     vente.client.save(update_fields=['solde_du', 'credit_disponible'])
                 else:
                     vente.client.save(update_fields=['solde_du'])
+                
+                # Si le client a tout payé, réinitialiser le crédit disponible
+                if vente.client.solde_du == 0:
+                    vente.client.credit_disponible = Decimal('0')
+                    vente.client.save(update_fields=['credit_disponible'])
 
             if surplus > 0:
                 messages.success(

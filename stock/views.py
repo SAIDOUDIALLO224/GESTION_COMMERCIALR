@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import F, Q, Sum, DecimalField, ExpressionWrapper
+from django.db.models import F, Q, Sum, Value, DecimalField, ExpressionWrapper
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from .models import MouvementStock
@@ -131,9 +132,27 @@ def imprimer_inventaire(request):
     if categorie_id:
         produits = produits.filter(categorie_id=categorie_id)
 
+    # Calculer les valeurs de stock à partir des mouvements pour garantir la concordance
+    from produits.models import Categorie
+    for produit in produits:
+        stock_initial = MouvementStock.objects.filter(
+            produit=produit,
+            type_mvt__in=['ENTREE', 'AJUSTEMENT', 'INVENTAIRE']
+        ).aggregate(
+            total=Coalesce(Sum('quantite'), Value(0, output_field=DecimalField(max_digits=12, decimal_places=3)))
+        )['total']
+        quantite_sortie = MouvementStock.objects.filter(
+            produit=produit,
+            type_mvt='SORTIE'
+        ).aggregate(
+            total=Coalesce(Sum('quantite'), Value(0, output_field=DecimalField(max_digits=12, decimal_places=3)))
+        )['total']
+        produit.stock_initial = stock_initial
+        produit.quantite_sortie = quantite_sortie
+        produit.stock_restant = produit.stock_actuel
+
     categorie_nom = ''
     if categorie_id:
-        from produits.models import Categorie
         categorie_nom = Categorie.objects.filter(pk=categorie_id).values_list('nom', flat=True).first() or ''
 
     context = {

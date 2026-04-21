@@ -20,43 +20,40 @@
     {% load humanize %}
 
     <div class="header">
-        <h1>Inventaire Produits</h1>
-        <p class="meta">Genere le {% now "d/m/Y \\a H:i" %}</p>
+        <h1>Clients Débiteurs</h1>
+        <p class="meta">Généré le {% now "d/m/Y à H:i" %}</p>
     </div>
 
     <div class="kpis">
-        <p><strong>Total produits:</strong> {{ produits|length|intcomma }}</p>
-        {% if search %}<p><strong>Recherche:</strong> {{ search }}</p>{% endif %}
-        {% if categorie_nom %}<p><strong>Categorie:</strong> {{ categorie_nom }}</p>{% endif %}
+        <p><strong>Nombre de clients débiteurs:</strong> {{ total_clients|intcomma }}</p>
+        <p><strong>Montant total dû:</strong> {{ total_montant_du|floatformat:0|intcomma }} GNF</p>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th>Code</th>
-                <th>Produit / Catégorie</th>
-                <th class="right">Quantité en stock</th>
-                <th class="right">Quantité vendue</th>
-                <th class="right">Quantité restante</th>
+                <th>Client</th>
+                <th>Téléphone</th>
+                <th>Adresse</th>
+                <th class="right">Montant dû</th>
             </tr>
         </thead>
         <tbody>
-            {% for produit in produits %}
+            {% for client in clients %}
             <tr>
-                <td>{{ produit.code }}</td>
-                <td>{{ produit.nom }} - {{ produit.categorie.nom }}</td>
-                <td class="right">{{ produit.stock_initial|floatformat:"-3" }}</td>
-                <td class="right">{{ produit.quantite_vendue|floatformat:"-3" }}</td>
-                <td class="right">{{ produit.stock_actuel_pdf|floatformat:"-3" }}</td>
+                <td>{{ client.nom }}</td>
+                <td>{{ client.telephone }}{% if client.telephone2 %} / {{ client.telephone2 }}{% endif %}</td>
+                <td>{{ client.quartier }}</td>
+                <td class="right">{{ client.solde_du|floatformat:0|intcomma }} GNF</td>
             </tr>
             {% empty %}
-            <tr><td colspan="5">Aucun produit.</td></tr>
+            <tr><td colspan="4">Aucun client débiteur.</td></tr>
             {% endfor %}
         </tbody>
     </table>
 
     <div class="footer">
-        Document systeme GesStock Madina
+        Document système GesStock Madina
     </div>
 </body>
 </html>

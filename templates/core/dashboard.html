@@ -5,21 +5,21 @@
 {% block page_title %}Tableau de Bord{% endblock %}
 
 {% block content %}
-<section class="relative overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-6 md:p-8 mb-6">
-    <div class="absolute -top-16 -right-16 w-52 h-52 bg-blue-200/35 rounded-full blur-3xl"></div>
-    <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-cyan-200/30 rounded-full blur-3xl"></div>
+<section class="relative overflow-hidden rounded-2xl border border-gray-700 bg-gradient-to-br from-gray-800 via-gray-900 to-black p-6 md:p-8 mb-6">
+    <div class="absolute -top-16 -right-16 w-52 h-52 bg-gray-600/20 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-gray-500/15 rounded-full blur-3xl"></div>
     <div class="relative">
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
             <div>
-                <p class="text-xs uppercase tracking-[0.18em] font-semibold text-blue-700">Vue d'ensemble</p>
-                <h2 class="mt-1 text-2xl md:text-3xl font-bold text-gray-900">Performance de la journée</h2>
-                <p class="mt-2 text-sm text-gray-600">Suivez en temps réel vos ventes, encaissements et crédits en cours.</p>
+                <p class="text-xs uppercase tracking-[0.18em] font-semibold text-gray-300">Vue d'ensemble</p>
+                <h2 class="mt-1 text-2xl md:text-3xl font-bold text-white">Performance de la journée</h2>
+                <p class="mt-2 text-sm text-gray-300">Suivez en temps réel vos ventes, encaissements et crédits en cours.</p>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <a href="{% url 'ventes:nouvelle' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">Nouvelle vente</a>
-                <a href="{% url 'clients:liste' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors">Clients</a>
-                <a href="{% url 'produits:liste' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors">Produits</a>
-                <a href="{% url 'rapports:index' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 transition-colors">Rapports</a>
+                <a href="{% url 'clients:liste' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-gray-700 text-gray-200 border border-gray-600 hover:bg-gray-600 transition-colors">Clients</a>
+                <a href="{% url 'produits:liste' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-gray-700 text-gray-200 border border-gray-600 hover:bg-gray-600 transition-colors">Produits</a>
+                <a href="{% url 'rapports:index' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-gray-700 text-gray-200 border border-gray-600 hover:bg-gray-600 transition-colors">Rapports</a>
             </div>
         </div>
     </div>

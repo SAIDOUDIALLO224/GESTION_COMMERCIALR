@@ -9,7 +9,7 @@
     <p class="text-sm text-gray-500 mt-1">Analysez vos ventes et votre stock avec des indicateurs lisibles.</p>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
     <a href="{% url 'rapports:ventes' %}" class="group bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md hover:border-blue-300 transition-all">
         <div class="flex items-start justify-between">
             <div>
@@ -29,6 +29,28 @@
                 <p class="text-sm text-gray-500 mt-2">Surveillez la valeur du stock, les niveaux critiques et les alertes.</p>
             </div>
             <div class="w-11 h-11 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center group-hover:scale-105 transition-transform">📦</div>
+        </div>
+    </a>
+
+    <a href="{% url 'rapports:paiements_journaliers' %}" class="group bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md hover:border-green-300 transition-all">
+        <div class="flex items-start justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-wide font-semibold text-green-700">Rapports</p>
+                <h2 class="text-xl font-bold text-gray-900 mt-1">Paiements Journaliers</h2>
+                <p class="text-sm text-gray-500 mt-2">Suivez les paiements reçus par jour et par client.</p>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-green-100 text-green-700 flex items-center justify-center group-hover:scale-105 transition-transform">💰</div>
+        </div>
+    </a>
+
+    <a href="{% url 'rapports:produits_vendus_journaliers' %}" class="group bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md hover:border-purple-300 transition-all">
+        <div class="flex items-start justify-between">
+            <div>
+                <p class="text-xs uppercase tracking-wide font-semibold text-purple-700">Rapports</p>
+                <h2 class="text-xl font-bold text-gray-900 mt-1">Produits Vendus</h2>
+                <p class="text-sm text-gray-500 mt-2">Consultez les produits vendus par jour avec quantités et montants.</p>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center group-hover:scale-105 transition-transform">🛒</div>
         </div>
     </a>
 </div>

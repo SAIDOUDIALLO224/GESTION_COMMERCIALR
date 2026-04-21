@@ -20,43 +20,47 @@
     {% load humanize %}
 
     <div class="header">
-        <h1>Inventaire Produits</h1>
-        <p class="meta">Genere le {% now "d/m/Y \\a H:i" %}</p>
+        <h1>Paiements Journaliers</h1>
+        <p class="meta">Date : {{ date_paiement|date:"d/m/Y" }}</p>
+        <p class="meta">Généré le {% now "d/m/Y à H:i" %}</p>
     </div>
 
     <div class="kpis">
-        <p><strong>Total produits:</strong> {{ produits|length|intcomma }}</p>
-        {% if search %}<p><strong>Recherche:</strong> {{ search }}</p>{% endif %}
-        {% if categorie_nom %}<p><strong>Categorie:</strong> {{ categorie_nom }}</p>{% endif %}
+        <p><strong>Nombre de clients :</strong> {{ nb_clients|intcomma }}</p>
+        <p><strong>Total payé :</strong> {{ total_jour|intcomma }} GNF</p>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th>Code</th>
-                <th>Produit / Catégorie</th>
-                <th class="right">Quantité en stock</th>
-                <th class="right">Quantité vendue</th>
-                <th class="right">Quantité restante</th>
+                <th>Client</th>
+                <th>Téléphone</th>
+                <th class="right">Montant payé</th>
             </tr>
         </thead>
         <tbody>
-            {% for produit in produits %}
+            {% for paiement in paiements_par_client %}
             <tr>
-                <td>{{ produit.code }}</td>
-                <td>{{ produit.nom }} - {{ produit.categorie.nom }}</td>
-                <td class="right">{{ produit.stock_initial|floatformat:"-3" }}</td>
-                <td class="right">{{ produit.quantite_vendue|floatformat:"-3" }}</td>
-                <td class="right">{{ produit.stock_actuel_pdf|floatformat:"-3" }}</td>
+                <td>{{ paiement.client__nom }}</td>
+                <td>{{ paiement.client__telephone }}</td>
+                <td class="right">{{ paiement.total_paye|intcomma }} GNF</td>
             </tr>
             {% empty %}
-            <tr><td colspan="5">Aucun produit.</td></tr>
+            <tr><td colspan="3">Aucun paiement enregistré pour cette date.</td></tr>
             {% endfor %}
         </tbody>
+        {% if paiements_par_client %}
+        <tfoot>
+            <tr>
+                <td colspan="2" class="right"><strong>Total du jour :</strong></td>
+                <td class="right"><strong>{{ total_jour|intcomma }} GNF</strong></td>
+            </tr>
+        </tfoot>
+        {% endif %}
     </table>
 
     <div class="footer">
-        Document systeme GesStock Madina
+        Document système GesStock Madina
     </div>
 </body>
 </html>

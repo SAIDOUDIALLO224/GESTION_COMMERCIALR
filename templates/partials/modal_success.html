@@ -1,0 +1,23 @@
+<!-- Modal Success -->
+<div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onclick="closeModal(event)">
+    <div class="bg-white rounded-xl shadow-lg max-w-md w-full mx-4" onclick="event.stopPropagation()">
+        <div class="p-6 text-center">
+            <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <h2 class="text-lg font-semibold text-gray-900 mb-2">Succès !</h2>
+            <p class="text-gray-600 mb-6">L'enregistrement a été créé avec succès.</p>
+            <button type="button" onclick="closeModalAndReload()" class="w-full px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors">
+                Continuer
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function closeModalAndReload() {
+    location.reload();
+}
+</script>

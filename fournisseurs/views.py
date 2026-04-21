@@ -76,8 +76,12 @@ def creer_fournisseur(request):
 		form = FournisseurForm(request.POST)
 		if form.is_valid():
 			form.save()
-			messages.success(request, 'Fournisseur cree avec succes!')
-			return redirect('fournisseurs:liste')
+			if request.headers.get('HX-Request'):
+				messages.success(request, 'Fournisseur créé avec succès!')
+				return render(request, 'partials/modal_success.html', {'redirect_url': 'javascript:location.reload()'})
+			else:
+				messages.success(request, 'Fournisseur cree avec succes!')
+				return redirect('fournisseurs:liste')
 	else:
 		form = FournisseurForm()
 
@@ -85,6 +89,10 @@ def creer_fournisseur(request):
 		'form': form,
 		'title': 'Ajouter un fournisseur'
 	}
+	
+	if request.headers.get('HX-Request'):
+		return render(request, 'partials/modal_form.html', context)
+	
 	return render(request, 'fournisseurs/form.html', context)
 
 

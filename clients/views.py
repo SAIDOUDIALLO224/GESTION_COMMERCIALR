@@ -89,12 +89,20 @@ def creer_client(request):
         form = ClientForm(request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Client créé avec succès!')
-            return redirect('clients:liste')
+            if request.headers.get('HX-Request'):
+                messages.success(request, 'Client créé avec succès!')
+                return render(request, 'partials/modal_success.html', {'redirect_url': 'javascript:location.reload()'})
+            else:
+                messages.success(request, 'Client créé avec succès!')
+                return redirect('clients:liste')
     else:
         form = ClientForm()
     
     context = {'form': form, 'title': 'Créer un client'}
+    
+    if request.headers.get('HX-Request'):
+        return render(request, 'partials/modal_form.html', context)
+    
     return render(request, 'clients/form.html', context)
 
 
@@ -122,3 +130,28 @@ def supprimer_client(request, pk):
         client.delete()
         messages.success(request, f'Client "{nom}" supprimé.')
     return redirect('clients:liste')
+
+
+@login_required
+def imprimer_clients_debiteurs(request):
+    from django.http import HttpResponse
+    from django.template.loader import render_to_string
+    from weasyprint import HTML
+    
+    # Clients avec solde dû > 0
+    clients_debiteurs = Client.objects.filter(solde_du__gt=0).order_by('nom')
+    
+    total_montant_du = clients_debiteurs.aggregate(total=Sum('solde_du'))['total'] or 0
+    
+    context = {
+        'clients': clients_debiteurs,
+        'total_clients': clients_debiteurs.count(),
+        'total_montant_du': total_montant_du,
+    }
+    
+    html_string = render_to_string('clients/pdf_debiteurs.html', context)
+    pdf = HTML(string=html_string).write_pdf()
+    
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="clients_debiteurs.pdf"'
+    return response

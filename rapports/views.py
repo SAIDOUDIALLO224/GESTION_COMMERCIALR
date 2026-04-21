@@ -191,3 +191,91 @@ def export_pdf_stock(request):
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="rapport_stock.pdf"'
     return response
+
+
+@login_required
+@gerant_required
+def paiements_journaliers(request):
+    from paiements.models import Paiement
+    from django.db.models import Sum
+    from datetime import date
+    
+    date_paiement = request.GET.get('date', date.today().strftime('%Y-%m-%d'))
+    
+    # Paiements du jour sélectionné
+    paiements_jour = Paiement.objects.filter(
+        date_paiement__date=date_paiement
+    ).select_related('client', 'vente').order_by('client__nom')
+    
+    # Grouper par client et sommer les montants
+    paiements_par_client = (
+        paiements_jour.values('client__nom', 'client__telephone')
+        .annotate(total_paye=Sum('montant'))
+        .order_by('client__nom')
+    )
+    
+    total_jour = paiements_par_client.aggregate(total=Sum('total_paye'))['total'] or 0
+    
+    context = {
+        'paiements_par_client': paiements_par_client,
+        'date_paiement': date_paiement,
+        'total_jour': total_jour,
+        'nb_clients': paiements_par_client.count(),
+    }
+    
+    # Si c'est une requête AJAX pour le PDF
+    if request.GET.get('format') == 'pdf':
+        html_string = render_to_string('rapports/pdf_paiements_journaliers.html', context)
+        pdf = HTML(string=html_string).write_pdf()
+        
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="paiements_{date_paiement}.pdf"'
+        return response
+    
+    return render(request, 'rapports/paiements_journaliers.html', context)
+
+
+@login_required
+@gerant_required
+def produits_vendus_journaliers(request):
+    from ventes.models import LigneVente
+    from datetime import date
+    
+    date_vente = request.GET.get('date', date.today().strftime('%Y-%m-%d'))
+    
+    # Produits vendus du jour sélectionné
+    lignes_vente_jour = LigneVente.objects.filter(
+        vente__date_vente__date=date_vente
+    ).select_related('produit', 'vente__client').order_by('produit__nom')
+    
+    # Grouper par produit et sommer les quantités
+    produits_vendus = (
+        lignes_vente_jour.values('produit__nom', 'produit__code', 'prix_unitaire')
+        .annotate(
+            quantite_totale=Sum('quantite'),
+            montant_total=Sum('sous_total')
+        )
+        .order_by('produit__nom')
+    )
+    
+    total_quantite = produits_vendus.aggregate(total=Sum('quantite_totale'))['total'] or 0
+    total_montant = produits_vendus.aggregate(total=Sum('montant_total'))['total'] or 0
+    
+    context = {
+        'produits_vendus': produits_vendus,
+        'date_vente': date_vente,
+        'total_quantite': total_quantite,
+        'total_montant': total_montant,
+        'nb_produits': produits_vendus.count(),
+    }
+    
+    # Si c'est une requête AJAX pour le PDF
+    if request.GET.get('format') == 'pdf':
+        html_string = render_to_string('rapports/pdf_produits_vendus_journaliers.html', context)
+        pdf = HTML(string=html_string).write_pdf()
+        
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="produits_vendus_{date_vente}.pdf"'
+        return response
+    
+    return render(request, 'rapports/produits_vendus_journaliers.html', context)

@@ -36,7 +36,9 @@
                 <th>Code</th>
                 <th>Categorie</th>
                 <th>Produit</th>
-                <th class="right">Stock</th>
+                <th class="right">Stock initial</th>
+                <th class="right">Qté sortie</th>
+                <th class="right">Stock actuel</th>
                 <th>Unite</th>
                 <th class="right">Prix achat</th>
                 <th class="right">Valeur stock</th>
@@ -48,13 +50,15 @@
                 <td>{{ produit.code }}</td>
                 <td>{{ produit.categorie.nom }}</td>
                 <td>{{ produit.nom }}</td>
-                <td class="right">{{ produit.stock_actuel|floatformat:"-3" }}</td>
+                <td class="right">{{ produit.stock_initial|floatformat:"-3" }}</td>
+                <td class="right">{{ produit.quantite_sortie|floatformat:"-3" }}</td>
+                <td class="right">{{ produit.stock_restant|floatformat:"-3" }}</td>
                 <td>{{ produit.unite_mesure }}</td>
-                <td class="right">{{ produit.prix_achat|floatformat:0|intcomma }}</td>
-                <td class="right">{{ produit.valeur_stock|floatformat:0|intcomma }}</td>
+                <td class="right">{{ produit.prix_achat|floatformat:2|intcomma }}</td>
+                <td class="right">{{ produit.valeur_stock|floatformat:2|intcomma }}</td>
             </tr>
             {% empty %}
-            <tr><td colspan="7">Aucun produit en stock.</td></tr>
+            <tr><td colspan="9">Aucun produit en stock.</td></tr>
             {% endfor %}
         </tbody>
     </table>

@@ -15,7 +15,7 @@ class ProduitAdmin(admin.ModelAdmin):
     search_fields = ['code', 'nom']
     fieldsets = (
         ('Informations', {'fields': ('code', 'nom', 'categorie', 'unite_mesure')}),
-        ('Prix', {'fields': ('prix_achat', 'prix_vente_gros', 'prix_vente_detail')}),
+        ('Prix', {'fields': ('prix_achat', 'prix_vente_gros')}),
         ('Stock', {'fields': ('stock_actuel', 'seuil_alerte')}),
         ('Autres', {'fields': ('photo', 'actif')}),
     )

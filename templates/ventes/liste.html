@@ -10,10 +10,19 @@
         <h1 class="text-2xl font-bold text-gray-900">Gestion des ventes</h1>
         <p class="text-sm text-gray-500 mt-1">Suivi des transactions, paiements et soldes restants.</p>
     </div>
-    <a href="{% url 'ventes:nouvelle' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        Nouvelle vente
-    </a>
+    <div class="flex items-center gap-2">
+        <a href="{% url 'rapports:produits_vendus_journaliers' %}"
+           class="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+            Produits vendus journaliers
+        </a>
+        <a href="{% url 'ventes:nouvelle' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nouvelle vente
+        </a>
+    </div>
 </div>
 
 <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-5">
