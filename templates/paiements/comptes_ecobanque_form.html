@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">{{ title }}</h1>
+
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="{{ form.client.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.client.label }}
+                        </label>
+                        {{ form.client }}
+                        {% if form.client.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {{ form.client.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.montant_verset.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.montant_verset.label }}
+                        </label>
+                        {{ form.montant_verset }}
+                        {% if form.montant_verset.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {{ form.montant_verset.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.montant_initial.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.montant_initial.label }}
+                        </label>
+                        {{ form.montant_initial }}
+                        {% if form.montant_initial.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {{ form.montant_initial.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.montant_restant.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.montant_restant.label }}
+                        </label>
+                        {{ form.montant_restant }}
+                        {% if form.montant_restant.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {{ form.montant_restant.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.montant_sorti.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.montant_sorti.label }}
+                        </label>
+                        {{ form.montant_sorti }}
+                        {% if form.montant_sorti.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {{ form.montant_sorti.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.date_operation.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.date_operation.label }}
+                        </label>
+                        {{ form.date_operation }}
+                        {% if form.date_operation.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {{ form.date_operation.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label for="{{ form.motif.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.motif.label }}
+                        </label>
+                        {{ form.motif }}
+                        {% if form.motif.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {{ form.motif.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end space-x-4">
+                    <a href="{% url 'paiements:comptes_ecobanque_liste' %}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                        Annuler
+                    </a>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -7,6 +7,100 @@ from ventes.models import Vente
 from clients.models import Client
 
 
+class CompteEcobanque(models.Model):
+    """Compte Ecobanque pour suivre les dépôts et retraits."""
+    nom = models.CharField(max_length=150, verbose_name=_("Nom du compte"))
+    numero_compte = models.CharField(max_length=100, blank=True, verbose_name=_("Numéro de compte"))
+    solde_initial = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)], verbose_name=_("Solde initial")
+    )
+    solde_courant = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)], verbose_name=_("Solde courant")
+    )
+    description = models.TextField(blank=True, verbose_name=_("Description"))
+    actif = models.BooleanField(default=True, verbose_name=_("Actif"))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Créé le"))
+
+    class Meta:
+        verbose_name = _("Compte Ecobanque")
+        verbose_name_plural = _("Comptes Ecobanque")
+        ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.solde_courant == Decimal('0'):
+            self.solde_courant = self.solde_initial
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.nom} ({self.numero_compte})" if self.numero_compte else self.nom
+
+
+class EcobanqueOperation(models.Model):
+    """Opérations Ecobanque : dépôt (remise) et retrait (débit)."""
+    TYPE_CHOICES = [
+        ('DEBIT', _('Débit')),
+        ('REMISE', _('Remise')),
+    ]
+
+    compte = models.ForeignKey(
+        CompteEcobanque,
+        on_delete=models.CASCADE,
+        related_name='operations',
+        verbose_name=_("Compte Ecobanque")
+    )
+    type_operation = models.CharField(
+        max_length=10, choices=TYPE_CHOICES,
+        verbose_name=_("Type d'opération")
+    )
+    montant = models.DecimalField(
+        max_digits=18, decimal_places=2,
+        validators=[MinValueValidator(0.01)],
+        verbose_name=_("Montant")
+    )
+    reference = models.CharField(max_length=150, blank=True, verbose_name=_("Référence"))
+    motif = models.TextField(blank=True, verbose_name=_("Motif"))
+    solde_avant = models.DecimalField(
+        max_digits=18, decimal_places=2, null=True, blank=True,
+        verbose_name=_("Solde avant opération")
+    )
+    solde_apres = models.DecimalField(
+        max_digits=18, decimal_places=2, null=True, blank=True,
+        verbose_name=_("Solde après opération")
+    )
+    date_operation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de l'opération"))
+    utilisateur = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("Utilisateur")
+    )
+
+    class Meta:
+        verbose_name = _("Opération Ecobanque")
+        verbose_name_plural = _("Opérations Ecobanque")
+        ordering = ['-date_operation']
+        indexes = [
+            models.Index(fields=['compte']),
+            models.Index(fields=['type_operation']),
+            models.Index(fields=['-date_operation']),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self._state.adding:
+            self.solde_avant = self.compte.solde_courant
+            if self.type_operation == 'DEBIT':
+                self.solde_apres = self.solde_avant - self.montant
+            else:
+                self.solde_apres = self.solde_avant + self.montant
+        super().save(*args, **kwargs)
+        if self._state.adding:
+            self.compte.solde_courant = self.solde_apres
+            self.compte.save(update_fields=['solde_courant'])
+
+    def __str__(self):
+        return f"{self.get_type_operation_display()} {self.montant} GNF - {self.compte}"
+
+
 class Paiement(models.Model):
     """Paiements"""
     MODE_CHOICES = [
@@ -57,3 +151,43 @@ class Paiement(models.Model):
 
     def __str__(self):
         return f"{self.montant}GNF - {self.get_mode_paiement_display()}"
+
+
+class CompteEcoBanqueClient(models.Model):
+    """Compte Ecobanque pour les clients : suivi des montants versés, initiaux, restants et sortis."""
+    client = models.ForeignKey(
+        Client, on_delete=models.CASCADE,
+        related_name='comptes_ecobanque', verbose_name=_("Client")
+    )
+    montant_verset = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)], verbose_name=_("Montant versé")
+    )
+    montant_initial = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)], verbose_name=_("Montant initial")
+    )
+    montant_restant = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)], verbose_name=_("Montant restant")
+    )
+    montant_sorti = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)], verbose_name=_("Montant sorti")
+    )
+    date_operation = models.DateField(null=True, blank=True, verbose_name=_("Date d'opération"))
+    motif = models.TextField(blank=True, verbose_name=_("Motif"))
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
+    date_modification = models.DateTimeField(auto_now=True, verbose_name=_("Date de modification"))
+    utilisateur = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("Utilisateur")
+    )
+
+    class Meta:
+        verbose_name = _("Compte EcoBanque Client")
+        verbose_name_plural = _("Comptes EcoBanque Clients Clients")
+        ordering = ['-date_creation']
+
+    def __str__(self):
+        return f"Compte {self.client.nom} - {self.montant_restant} GNF restant"
