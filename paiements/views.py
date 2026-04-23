@@ -53,7 +53,7 @@ def comptes_ecobanque_form(request, pk=None):
             compte.utilisateur = request.user
             compte.save()
             messages.success(request, f"Compte {compte.client.nom} enregistré avec succès.")
-            return redirect('comptes_ecobanque_liste')
+            return redirect('paiements:comptes_ecobanque_liste')
     else:
         form = CompteEcoBanqueClientForm(instance=compte)
 
