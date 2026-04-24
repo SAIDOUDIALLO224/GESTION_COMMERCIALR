@@ -20,6 +20,11 @@ class ProduitForm(forms.ModelForm):
             self.fields['code'].required = False
         else:
             self.fields['code'].disabled = True
+            # Stocker les anciennes valeurs pour affichage
+            self.ancien_prix_achat = self.instance.prix_achat
+            self.ancien_prix_vente_gros = self.instance.prix_vente_gros
+            self.ancien_stock_actuel = self.instance.stock_actuel
+            self.ancien_seuil_alerte = self.instance.seuil_alerte
 
     class Meta:
         model = Produit

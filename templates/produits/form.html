@@ -106,6 +106,9 @@
                  step="0.01" min="0"
                  x-model.number="prixAchat"
                  class="w-full px-3 py-2 border {% if form.prix_achat.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if produit %}
+          <p class="mt-1 text-xs text-gray-500">Ancien prix: {{ produit.prix_achat|floatformat:2 }} GNF</p>
+          {% endif %}
           {% if form.prix_achat.errors %}<p class="mt-1 text-xs text-red-600">{{ form.prix_achat.errors.0 }}</p>{% endif %}
         </div>
 
@@ -115,6 +118,9 @@
                  step="0.01" min="0"
                  x-model.number="prixGros"
                  class="w-full px-3 py-2 border {% if form.prix_vente_gros.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if produit %}
+          <p class="mt-1 text-xs text-gray-500">Ancien prix: {{ produit.prix_vente_gros|floatformat:2 }} GNF</p>
+          {% endif %}
           {% if form.prix_vente_gros.errors %}<p class="mt-1 text-xs text-red-600">{{ form.prix_vente_gros.errors.0 }}</p>{% endif %}
         </div>
       </div>
@@ -136,16 +142,22 @@
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.stock_actuel.label }}</label>
           <input type="number" name="stock_actuel" value="{{ form.stock_actuel.value|default:'' }}"
-                 step="0.001" min="0"
+                 step="0.001"
                  class="w-full px-3 py-2 border {% if form.stock_actuel.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if produit %}
+          <p class="mt-1 text-xs text-gray-500">Ancien stock: {{ produit.stock_actuel|floatformat:3 }}</p>
+          {% endif %}
           {% if form.stock_actuel.errors %}<p class="mt-1 text-xs text-red-600">{{ form.stock_actuel.errors.0 }}</p>{% endif %}
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.seuil_alerte.label }}</label>
           <input type="number" name="seuil_alerte" value="{{ form.seuil_alerte.value|default:'' }}"
-                 step="0.001" min="0"
+                 step="0.001"
                  class="w-full px-3 py-2 border {% if form.seuil_alerte.errors %}border-red-400{% else %}border-gray-300{% endif %} rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          {% if produit %}
+          <p class="mt-1 text-xs text-gray-500">Ancien seuil: {{ produit.seuil_alerte|floatformat:3 }}</p>
+          {% endif %}
           {% if form.seuil_alerte.errors %}<p class="mt-1 text-xs text-red-600">{{ form.seuil_alerte.errors.0 }}</p>{% endif %}
         </div>
       </div>

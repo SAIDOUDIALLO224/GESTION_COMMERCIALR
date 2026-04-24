@@ -8,4 +8,5 @@ urlpatterns = [
     path('comptes-ecobanque/', views.comptes_ecobanque_liste, name='comptes_ecobanque_liste'),
     path('comptes-ecobanque/nouveau/', views.comptes_ecobanque_form, name='comptes_ecobanque_nouveau'),
     path('comptes-ecobanque/<int:pk>/modifier/', views.comptes_ecobanque_form, name='comptes_ecobanque_modifier'),
+    path('comptes-ecobanque/<int:pk>/supprimer/', views.compte_ecobanque_supprimer, name='comptes_ecobanque_supprimer'),
 ]

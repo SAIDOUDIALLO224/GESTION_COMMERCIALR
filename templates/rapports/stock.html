@@ -75,12 +75,14 @@
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-3 font-medium text-gray-900">{{ produit.nom }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ produit.categorie.nom }}</td>
-                    <td class="px-4 py-3 text-right {% if produit.en_alerte %}text-red-700{% else %}text-gray-900{% endif %}">{{ produit.stock_actuel|floatformat:"-3" }} {{ produit.unite_mesure }}</td>
+                    <td class="px-4 py-3 text-right {% if produit.stock_actuel < 0 or produit.en_alerte %}text-red-700 font-semibold{% else %}text-gray-900{% endif %}">{{ produit.stock_actuel|floatformat:"-3" }} {{ produit.unite_mesure }}</td>
                     <td class="px-4 py-3 text-right text-gray-600">{{ produit.seuil_alerte|floatformat:"-3" }}</td>
                     <td class="px-4 py-3 text-right text-gray-600">{{ produit.prix_achat|floatformat:0|intcomma }} GNF</td>
                     <td class="px-4 py-3 text-right font-semibold text-gray-900">{{ produit.valeur_stock|floatformat:0|intcomma }} GNF</td>
                     <td class="px-4 py-3">
-                        {% if produit.en_alerte %}
+                        {% if produit.stock_actuel < 0 %}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-600 text-white">Négatif</span>
+                        {% elif produit.en_alerte %}
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Alerte</span>
                         {% else %}
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">OK</span>

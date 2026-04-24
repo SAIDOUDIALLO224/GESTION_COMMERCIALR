@@ -35,11 +35,11 @@ class Produit(models.Model):
     )
     
     stock_actuel = models.DecimalField(
-        max_digits=12, decimal_places=3, default=0, validators=[MinValueValidator(0)],
+        max_digits=12, decimal_places=3, default=0,
         verbose_name=_("Stock actuel")
     )
     seuil_alerte = models.DecimalField(
-        max_digits=12, decimal_places=3, default=0, validators=[MinValueValidator(0)],
+        max_digits=12, decimal_places=3, default=0,
         verbose_name=_("Seuil d'alerte")
     )
     

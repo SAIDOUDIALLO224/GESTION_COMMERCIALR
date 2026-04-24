@@ -32,7 +32,7 @@ def comptes_ecobanque_liste(request):
     comptes = CompteEcoBanqueClient.objects.select_related('client', 'utilisateur').order_by('-date_creation')
     context = {
         'comptes': comptes,
-        'title': 'Comptes EcoBanque Clients'
+        'title': 'Comptes Ecobanque'
     }
     return render(request, 'paiements/comptes_ecobanque_liste.html', context)
 
@@ -44,7 +44,7 @@ def comptes_ecobanque_form(request, pk=None):
         title = f"Modifier le compte {compte.client.nom}"
     else:
         compte = None
-        title = "Nouveau compte EcoBanque"
+        title = "Nouveau compte Ecobanque"
 
     if request.method == 'POST':
         form = CompteEcoBanqueClientForm(request.POST, instance=compte)
@@ -63,6 +63,15 @@ def comptes_ecobanque_form(request, pk=None):
         'compte': compte
     }
     return render(request, 'paiements/comptes_ecobanque_form.html', context)
+
+
+@login_required
+def compte_ecobanque_supprimer(request, pk):
+    compte = get_object_or_404(CompteEcoBanqueClient, pk=pk)
+    client_nom = compte.client.nom
+    compte.delete()
+    messages.success(request, f"Compte de {client_nom} supprimé avec succès.")
+    return redirect('paiements:comptes_ecobanque_liste')
 
 
 @login_required

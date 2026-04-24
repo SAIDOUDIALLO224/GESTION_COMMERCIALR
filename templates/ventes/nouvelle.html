@@ -49,10 +49,10 @@
         </div>
 
         <div id="produits-container" class="space-y-3">
-            <div class="produit-ligne grid grid-cols-1 md:grid-cols-[2fr_1fr_auto] gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+            <div class="produit-ligne grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Produit</label>
-                    <select name="produit_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select name="produit_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="updatePrixForClient(this);">
                         <option value="">-- Sélectionner un produit --</option>
                         {% for produit in produits %}
                         <option value="{{ produit.id }}" data-prix="{{ produit.prix_vente_gros }}">{{ produit.nom }} ({{ produit.stock_actuel|floatformat:"-3" }} dispo)</option>
@@ -61,7 +61,12 @@
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">Quantité</label>
-                    <input type="number" name="quantite" step="0.001" min="0.001" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0">
+                    <input type="number" name="quantite" step="0.001" min="0.001" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0" oninput="recalculerTotaux();">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">Prix unitaire (GNF)</label>
+                    <input type="number" name="prix_unitaire" step="1" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500" placeholder="Prix par défaut" oninput="recalculerTotaux();">
+                    <input type="hidden" name="prix_par_defaut" class="prix-par-defaut" value="">
                 </div>
                 <div class="flex items-end gap-2">
                     <span class="ligne-total text-xs font-semibold text-gray-500 min-w-[96px] text-right">0 GNF</span>
@@ -95,10 +100,10 @@
 function ajouterProduit() {
     const container = document.getElementById('produits-container');
     const html = `
-        <div class="produit-ligne grid grid-cols-1 md:grid-cols-[2fr_1fr_auto] gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+        <div class="produit-ligne grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
             <div>
                 <label class="block text-xs text-gray-500 mb-1">Produit</label>
-                <select name="produit_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select name="produit_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="updatePrixForClient(this);">
                     <option value="">-- Sélectionner un produit --</option>
                     {% for produit in produits %}
                     <option value="{{ produit.id }}" data-prix="{{ produit.prix_vente_gros }}">{{ produit.nom }} ({{ produit.stock_actuel|floatformat:"-3" }} dispo)</option>
@@ -107,7 +112,12 @@ function ajouterProduit() {
             </div>
             <div>
                 <label class="block text-xs text-gray-500 mb-1">Quantité</label>
-                <input type="number" name="quantite" step="0.001" min="0.001" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0">
+                <input type="number" name="quantite" step="0.001" min="0.001" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0" oninput="recalculerTotaux();">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">Prix unitaire (GNF)</label>
+                <input type="number" name="prix_unitaire" step="1" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500" placeholder="Prix par défaut" oninput="recalculerTotaux();">
+                <input type="hidden" name="prix_par_defaut" class="prix-par-defaut" value="">
             </div>
             <div class="flex items-end gap-2">
                 <span class="ligne-total text-xs font-semibold text-gray-500 min-w-[96px] text-right">0 GNF</span>
@@ -133,6 +143,24 @@ function formatGNF(value) {
     return Math.round(value).toLocaleString('fr-FR') + ' GNF';
 }
 
+function updatePrixForClient(selectElement) {
+    const ligne = selectElement.closest('.produit-ligne');
+    const prixInput = ligne.querySelector('input[name="prix_unitaire"]');
+    const prixParDefautInput = ligne.querySelector('input[name="prix_par_defaut"]');
+    const option = selectElement.options[selectElement.selectedIndex];
+    const prixDefaut = option ? nombre(option.getAttribute('data-prix')) : 0;
+    
+    // Stocker le prix par défaut
+    prixParDefautInput.value = prixDefaut;
+    
+    // Si le champ de prix est vide, mettre le prix par défaut
+    if (!prixInput.value || prixInput.value === '0') {
+        prixInput.value = prixDefaut;
+    }
+    
+    recalculerTotaux();
+}
+
 function recalculerTotaux() {
     const lignes = document.querySelectorAll('.produit-ligne');
     let total = 0;
@@ -140,10 +168,18 @@ function recalculerTotaux() {
     lignes.forEach((ligne) => {
         const select = ligne.querySelector('select[name="produit_id"]');
         const quantiteInput = ligne.querySelector('input[name="quantite"]');
+        const prixInput = ligne.querySelector('input[name="prix_unitaire"]');
         const ligneTotalNode = ligne.querySelector('.ligne-total');
 
         const option = select ? select.options[select.selectedIndex] : null;
-        const prix = option ? nombre(option.getAttribute('data-prix')) : 0;
+        const prixParDefaut = option ? nombre(option.getAttribute('data-prix')) : 0;
+        
+        // Utiliser le prix modifié si présent, sinon le prix par défaut
+        let prix = nombre(prixInput.value);
+        if (prix === 0) {
+            prix = prixParDefaut;
+        }
+        
         const quantite = quantiteInput ? nombre(quantiteInput.value) : 0;
         const sousTotal = prix * quantite;
 

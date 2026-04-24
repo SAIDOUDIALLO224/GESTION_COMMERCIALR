@@ -101,23 +101,24 @@ def nouvelle_vente(request):
                 # Ajouter les lignes de vente
                 produits_ids = request.POST.getlist('produit_id')
                 quantites = request.POST.getlist('quantite')
+                prix_unitaires = request.POST.getlist('prix_unitaire')
                 
                 montant_total = Decimal('0')
-                for produit_id, quantite in zip(produits_ids, quantites):
+                for produit_id, quantite, prix_personnalise in zip(produits_ids, quantites, prix_unitaires):
                     if not produit_id or not quantite:
                         continue
                     
                     produit = Produit.objects.get(pk=produit_id)
                     quantite = Decimal(quantite)
                     
-                    # Vérifier le stock
-                    if produit.stock_actuel < quantite:
-                        messages.error(request, f'Stock insuffisant pour {produit.nom}')
-                        vente.delete()
-                        return redirect('ventes:nouvelle')
+                    # Vérifier le stock (on permet les stocks négatifs pour les ventes)
+                    # Le stock peut devenir négatif si on vend plus que disponible
                     
-                    # Utiliser uniquement le prix de vente gros
-                    prix_unitaire = produit.prix_vente_gros
+                    # Utiliser le prix personnalisé si modifié par l'utilisateur, sinon le prix de vente gros
+                    if prix_personnalise and Decimal(prix_personnalise) > 0:
+                        prix_unitaire = Decimal(prix_personnalise)
+                    else:
+                        prix_unitaire = produit.prix_vente_gros
                     
                     # Si le prix est 0, erreur
                     if prix_unitaire == 0:
