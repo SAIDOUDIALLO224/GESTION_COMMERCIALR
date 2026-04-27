@@ -156,8 +156,14 @@ def export_pdf_ventes(request):
 @login_required
 @gerant_required
 def export_pdf_stock(request):
-    date_debut = request.GET.get('date_debut')
-    date_fin = request.GET.get('date_fin')
+    from datetime import date
+    from django.db.models import Sum
+    from ventes.models import LigneVente
+    
+    # Par défaut, afficher uniquement le jour en cours
+    today = date.today().strftime('%Y-%m-%d')
+    date_debut = request.GET.get('date_debut', today)
+    date_fin = request.GET.get('date_fin', today)
 
     date_debut = None if date_debut in (None, '', 'None') else date_debut
     date_fin = None if date_fin in (None, '', 'None') else date_fin
@@ -176,6 +182,15 @@ def export_pdf_stock(request):
     mouvements = mouvements[:50]
     produits_alerte = produits.filter(stock_actuel__lte=F('seuil_alerte'))
 
+    # Calculer les quantités vendues par produit pour la période
+    lignes_vente = LigneVente.objects.filter(vente__date_vente__date__gte=date_debut, vente__date_vente__date__lte=date_fin)
+    quantites_vendues = lignes_vente.values('produit__id', 'produit__nom').annotate(
+        quantite_vendue=Sum('quantite')
+    ).order_by('produit__nom')
+    
+    # Créer un dictionnaire pour un accès rapide
+    quantites_vendues_dict = {lv['produit__id']: lv['quantite_vendue'] for lv in quantites_vendues}
+
     context = {
         'produits': produits,
         'mouvements': mouvements,
@@ -184,6 +199,7 @@ def export_pdf_stock(request):
         'total_stock_value': produits.aggregate(Sum('valeur_stock'))['valeur_stock__sum'] or 0,
         'date_debut': date_debut,
         'date_fin': date_fin,
+        'quantites_vendues': quantites_vendues_dict,
     }
     html_string = render_to_string('rapports/pdf_stock.html', context)
     pdf = HTML(string=html_string).write_pdf()

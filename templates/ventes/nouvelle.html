@@ -55,7 +55,7 @@
                     <select name="produit_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="updatePrixForClient(this);">
                         <option value="">-- Sélectionner un produit --</option>
                         {% for produit in produits %}
-                        <option value="{{ produit.id }}" data-prix="{{ produit.prix_vente_gros }}">{{ produit.nom }} ({{ produit.stock_actuel|floatformat:"-3" }} dispo)</option>
+                        <option value="{{ produit.id }}" data-prix="{{ produit.prix_vente_gros }}">[{{ produit.code }}] {{ produit.nom }} - {{ produit.categorie.nom }} ({{ produit.stock_actuel|floatformat:"-3" }} dispo)</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -106,7 +106,7 @@ function ajouterProduit() {
                 <select name="produit_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="updatePrixForClient(this);">
                     <option value="">-- Sélectionner un produit --</option>
                     {% for produit in produits %}
-                    <option value="{{ produit.id }}" data-prix="{{ produit.prix_vente_gros }}">{{ produit.nom }} ({{ produit.stock_actuel|floatformat:"-3" }} dispo)</option>
+                    <option value="{{ produit.id }}" data-prix="{{ produit.prix_vente_gros }}">[{{ produit.code }}] {{ produit.nom }} - {{ produit.categorie.nom }} ({{ produit.stock_actuel|floatformat:"-3" }} dispo)</option>
                     {% endfor %}
                 </select>
             </div>

@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    {% load custom_filters %}
     <style>
         body { font-family: Arial, sans-serif; color: #333; font-size: 12px; }
         .header { text-align: center; border-bottom: 2px solid #1e40af; padding-bottom: 14px; margin-bottom: 20px; }
@@ -19,7 +20,7 @@
     </style>
 </head>
 <body>
-    {% load humanize %}
+    {% load humanize custom_filters %}
     <div class="header">
         <h1>Rapport de Stock</h1>
         <p class="meta">
@@ -45,6 +46,7 @@
                 <th>Produit</th>
                 <th>Categorie</th>
                 <th class="right">Stock</th>
+                <th class="right">Vendu</th>
                 <th class="right">Seuil</th>
                 <th class="right">Valeur</th>
             </tr>
@@ -55,6 +57,7 @@
                 <td>{{ produit.nom }}</td>
                 <td>{{ produit.categorie.nom }}</td>
                 <td class="right{% if produit.stock_actuel < 0 %} stock-negatif{% endif %}">{{ produit.stock_actuel|floatformat:"-3" }} {{ produit.unite_mesure }}</td>
+                <td class="right{% if quantites_vendues|get_item:produit.id > produit.stock_actuel %} stock-negatif{% endif %}">{% if quantites_vendues|get_item:produit.id %}-{{ quantites_vendues|get_item:produit.id|floatformat:"-3" }}{% else %}0{% endif %}</td>
                 <td class="right">{{ produit.seuil_alerte|floatformat:"-3" }}</td>
                 <td class="right">{{ produit.valeur_stock|floatformat:0|intcomma }}</td>
             </tr>

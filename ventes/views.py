@@ -202,7 +202,7 @@ def nouvelle_vente(request):
     else:
         form = VenteForm()
     
-    produits = Produit.objects.filter(actif=True).order_by('nom')
+    produits = Produit.objects.filter(actif=True).select_related('categorie').order_by('categorie__nom', 'nom')
     context = {
         'form': form,
         'produits': produits,
