@@ -175,6 +175,10 @@ class CompteEcoBanqueClient(models.Model):
         max_digits=18, decimal_places=2, default=0,
         validators=[MinValueValidator(0)], verbose_name=_("Montant sorti")
     )
+    montant_exact_compte = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0,
+        validators=[MinValueValidator(0)], verbose_name=_("Montant exact du compte")
+    )
     date_operation = models.DateField(null=True, blank=True, verbose_name=_("Date d'opération"))
     motif = models.TextField(blank=True, verbose_name=_("Motif"))
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name=_("Date de création"))
@@ -184,10 +188,34 @@ class CompteEcoBanqueClient(models.Model):
         verbose_name=_("Utilisateur")
     )
 
-    class Meta:
-        verbose_name = _("Compte EcoBanque Client")
-        verbose_name_plural = _("Comptes EcoBanque Clients Clients")
-        ordering = ['-date_creation']
+    def save(self, *args, **kwargs):
+        # Le montant_exact_compte est saisi manuellement et représente le solde bancaire actuel
+        # Il n'est pas calculé automatiquement dans ce modèle, seulement ajusté si nécessaire lors des opérations
+        
+        # Si c'est une nouvelle opération avec des montants, on pourrait ajuster un solde global
+        # Mais pour l'instant, gardons la logique simple : le montant_exact_compte est saisi manuellement
+        super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f"Compte {self.client.nom} - {self.montant_restant} GNF restant"
+    @property
+    def total_montants_sortis(self):
+        """Total de tous les montants sortis pour ce client"""
+        return CompteEcoBanqueClient.objects.filter(client=self.client).aggregate(
+            total=models.Sum('montant_sorti')
+        )['total'] or Decimal('0')
+
+    @property
+    def total_montants_entrants(self):
+        """Total de tous les montants entrants (versés + initiaux) pour ce client"""
+        return CompteEcoBanqueClient.objects.filter(client=self.client).aggregate(
+            total=models.Sum(models.F('montant_verset') + models.F('montant_initial'))
+        )['total'] or Decimal('0')
+
+    @property
+    def total_montants_sortis(self):
+        """Total des montants sortis pour ce client"""
+        return self.montant_sorti
+
+    @property
+    def total_montants_entrants(self):
+        """Total des montants entrants (versés + initial) pour ce client"""
+        return self.montant_verset + self.montant_initial

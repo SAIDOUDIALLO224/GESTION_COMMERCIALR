@@ -73,13 +73,13 @@
                     </div>
 
                     <div>
-                        <label for="{{ form.date_operation.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            {{ form.date_operation.label }}
+                        <label for="{{ form.montant_exact_compte.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.montant_exact_compte.label }}
                         </label>
-                        {{ form.date_operation }}
-                        {% if form.date_operation.errors %}
+                        {{ form.montant_exact_compte }}
+                        {% if form.montant_exact_compte.errors %}
                             <div class="text-red-500 text-sm mt-1">
-                                {{ form.date_operation.errors.0 }}
+                                {{ form.montant_exact_compte.errors.0 }}
                             </div>
                         {% endif %}
                     </div>
