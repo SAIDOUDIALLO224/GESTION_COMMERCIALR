@@ -83,10 +83,9 @@ def comptes_ecobanque_form(request, pk=None):
             compte = form.save(commit=False)
             compte.utilisateur = request.user
             
-            # Calculer la différence pour ajuster le montant exact du compte
             ancien_montant_entrant = Decimal('0')
             ancien_montant_sorti = Decimal('0')
-            if compte.pk:  # Si c'est une modification
+            if compte.pk:
                 ancien_compte = CompteEcoBanqueClient.objects.get(pk=compte.pk)
                 ancien_montant_entrant = ancien_compte.montant_verset + ancien_compte.montant_initial
                 ancien_montant_sorti = ancien_compte.montant_sorti
@@ -97,12 +96,14 @@ def comptes_ecobanque_form(request, pk=None):
             difference_entrant = nouveau_montant_entrant - ancien_montant_entrant
             difference_sorti = nouveau_montant_sorti - ancien_montant_sorti
             
-            # Ajuster le montant exact du compte : + entrants, - sortis
             ajustement_total = difference_entrant - difference_sorti
             
             if ajustement_total != 0 and 'montant_exact_compte_global' in request.session:
                 montant_exact_actuel = Decimal(request.session['montant_exact_compte_global'])
                 nouveau_montant_exact = montant_exact_actuel + ajustement_total
+                request.session['montant_exact_compte_global'] = str(nouveau_montant_exact)
+            elif ajustement_total != 0:
+                nouveau_montant_exact = ajustement_total
                 request.session['montant_exact_compte_global'] = str(nouveau_montant_exact)
             
             compte.save()
@@ -124,12 +125,14 @@ def compte_ecobanque_supprimer(request, pk):
     compte = get_object_or_404(CompteEcoBanqueClient, pk=pk)
     client_nom = compte.client.nom
     
-    # Soustraire les montants entrants du montant exact du compte
     montant_entrant_a_soustraire = compte.montant_verset + compte.montant_initial
-    if 'montant_exact_compte' in request.session:
-        montant_exact_actuel = Decimal(request.session['montant_exact_compte'])
-        nouveau_montant_exact = montant_exact_actuel - montant_entrant_a_soustraire
-        request.session['montant_exact_compte'] = str(nouveau_montant_exact)
+    montant_sorti_a_ajouter = compte.montant_sorti
+    ajustement = montant_sorti_a_ajouter - montant_entrant_a_soustraire
+    
+    if 'montant_exact_compte_global' in request.session:
+        montant_exact_actuel = Decimal(request.session['montant_exact_compte_global'])
+        nouveau_montant_exact = montant_exact_actuel + ajustement
+        request.session['montant_exact_compte_global'] = str(nouveau_montant_exact)
     
     compte.delete()
     messages.success(request, f"Compte de {client_nom} supprimé avec succès.")

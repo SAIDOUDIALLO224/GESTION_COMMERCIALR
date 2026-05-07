@@ -2,11 +2,13 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, F
 from .models import Client
-from ventes.models import Vente
+from ventes.models import Vente, LigneVente
 from paiements.models import Paiement
 from django import forms
+from decimal import Decimal
+import uuid
 
 
 class ClientForm(forms.ModelForm):
@@ -25,6 +27,102 @@ class ClientForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500', 'rows': 3}),
             'actif': forms.CheckboxInput(attrs={'class': 'h-4 w-4 text-blue-600 border-gray-300 rounded'}),
         }
+
+
+class DetteInitialeForm(forms.Form):
+    client = forms.ModelChoiceField(
+        queryset=Client.objects.all(),
+        required=True,
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
+        label='Client'
+    )
+    montant = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'step': '0.01',
+        }),
+        label='Montant de la dette (GNF)'
+    )
+    date_approximative = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
+        label='Date approximative (optionnel)'
+    )
+    motif = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'rows': 3,
+            'placeholder': 'Ex: Stock riz pris en janvier 2024...'
+        }),
+        label='Motif'
+    )
+
+
+class RemboursementSurplusForm(forms.Form):
+    montant = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'step': '0.01',
+        }),
+        label='Montant à rembourser (GNF)'
+    )
+    mode_paiement = forms.ChoiceField(
+        choices=[('ESPECES', 'Espèces'), ('CHEQUE', 'Chèque'), ('VIREMENT', 'Virement')],
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
+        label='Mode de remboursement'
+    )
+    motif = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'rows': 2,
+        }),
+        label='Motif (optionnel)'
+    )
+
+
+class CreditInitialForm(forms.Form):
+    client = forms.ModelChoiceField(
+        queryset=Client.objects.all(),
+        required=True,
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
+        label='Client'
+    )
+    montant = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'step': '0.01',
+        }),
+        label='Montant du crédit (GNF) - L\'entreprise doit ce montant'
+    )
+    motif = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'rows': 3,
+            'placeholder': 'Ex: Trop-payé en janvier 2024, avance non utilisée...'
+        }),
+        label='Motif'
+    )
 
 
 @login_required
@@ -138,15 +236,29 @@ def imprimer_clients_debiteurs(request):
     from django.template.loader import render_to_string
     from weasyprint import HTML
     
-    # Clients avec solde dû > 0
     clients_debiteurs = Client.objects.filter(solde_du__gt=0).order_by('nom')
+    clients_entreprise_doit = Client.objects.filter(
+        credit_disponible__gt=F('solde_du')
+    ).order_by('nom')
     
-    total_montant_du = clients_debiteurs.aggregate(total=Sum('solde_du'))['total'] or 0
+    clients_debiteurs_data = []
+    total_net_du = Decimal('0')
+    for c in clients_debiteurs:
+        net = c.solde_du - c.credit_disponible
+        clients_debiteurs_data.append((c, net))
+        total_net_du += net
+    
+    clients_entreprise_doit_data = []
+    for c in clients_entreprise_doit:
+        net = c.credit_disponible - c.solde_du
+        clients_entreprise_doit_data.append((c, net))
     
     context = {
-        'clients': clients_debiteurs,
-        'total_clients': clients_debiteurs.count(),
-        'total_montant_du': total_montant_du,
+        'clients_debiteurs': clients_debiteurs_data,
+        'clients_entreprise_doit': clients_entreprise_doit_data,
+        'total_clients_debiteurs': len(clients_debiteurs_data),
+        'total_clients_credit': len(clients_entreprise_doit_data),
+        'total_net_du': total_net_du,
     }
     
     html_string = render_to_string('clients/pdf_debiteurs.html', context)
@@ -155,3 +267,116 @@ def imprimer_clients_debiteurs(request):
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="clients_debiteurs.pdf"'
     return response
+
+
+@login_required
+def dette_initiale(request):
+    if request.method == 'POST':
+        form = DetteInitialeForm(request.POST)
+        if form.is_valid():
+            client = form.cleaned_data['client']
+            montant = form.cleaned_data['montant']
+            date_approx = form.cleaned_data.get('date_approximative')
+            motif = form.cleaned_data.get('motif', '')
+            
+            notes = f"Dette initiale enregistrée"
+            if date_approx:
+                notes += f" (date approx: {date_approx.strftime('%d/%m/%Y')})"
+            if motif:
+                notes += f" - {motif}"
+            
+            numero = f"DETTE-INIT-{uuid.uuid4().hex[:8].upper()}"
+            
+            vente = Vente.objects.create(
+                numero=numero,
+                client=client,
+                montant_total=montant,
+                montant_paye=Decimal('0'),
+                solde_restant=montant,
+                statut='EN_ATTENTE',
+                notes=notes,
+                utilisateur=request.user,
+            )
+            
+            client.solde_du += montant
+            client.save(update_fields=['solde_du'])
+            
+            messages.success(request, f'Dette initiale de {montant:,.0f} GNF enregistrée pour {client.nom}.')
+            return redirect('clients:detail', pk=client.pk)
+    else:
+        form = DetteInitialeForm()
+    
+    context = {'form': form, 'title': 'Enregistrer une dette initiale'}
+    return render(request, 'clients/dette_initiale.html', context)
+
+
+@login_required
+def remboursement_surplus(request, pk):
+    client = get_object_or_404(Client, pk=pk)
+    
+    if client.credit_disponible <= 0:
+        messages.error(request, 'Ce client n\'a pas de crédit disponible à rembourser.')
+        return redirect('clients:detail', pk=client.pk)
+    
+    if request.method == 'POST':
+        form = RemboursementSurplusForm(request.POST)
+        if form.is_valid():
+            montant = form.cleaned_data['montant']
+            mode_paiement = form.cleaned_data['mode_paiement']
+            motif = form.cleaned_data.get('motif', '')
+            
+            if montant > client.credit_disponible:
+                messages.error(request, f'Le montant ne peut pas dépasser le crédit disponible ({client.credit_disponible:,.0f} GNF).')
+            else:
+                Vente.objects.create(
+                    numero=f"REMBOURS-{uuid.uuid4().hex[:8].upper()}",
+                    client=client,
+                    montant_total=montant,
+                    montant_paye=montant,
+                    solde_restant=Decimal('0'),
+                    statut='SOLDE',
+                    notes=f"Remboursement surplus - Mode: {mode_paiement}" + (f" - {motif}" if motif else ""),
+                    utilisateur=request.user,
+                )
+                
+                client.credit_disponible -= montant
+                if client.solde_du == 0:
+                    client.credit_disponible = max(Decimal('0'), client.credit_disponible)
+                client.save(update_fields=['credit_disponible'])
+                
+                messages.success(request, f'Remboursement de {montant:,.0f} GNF enregistré pour {client.nom}.')
+                return redirect('clients:detail', pk=client.pk)
+    else:
+        form = RemboursementSurplusForm(initial={'montant': client.credit_disponible})
+    
+    context = {
+        'form': form,
+        'client': client,
+        'title': 'Rembourser le surplus',
+    }
+    return render(request, 'clients/remboursement_surplus.html', context)
+
+
+@login_required
+def credit_disponible_initial(request):
+    if request.method == 'POST':
+        form = CreditInitialForm(request.POST)
+        if form.is_valid():
+            client = form.cleaned_data['client']
+            montant = form.cleaned_data['montant']
+            motif = form.cleaned_data.get('motif', '')
+            
+            notes = f"Crédit disponible initial enregistré"
+            if motif:
+                notes += f" - {motif}"
+            
+            client.credit_disponible += montant
+            client.save(update_fields=['credit_disponible'])
+            
+            messages.success(request, f'Crédit disponible de {montant:,.0f} GNF enregistré pour {client.nom}.')
+            return redirect('clients:detail', pk=client.pk)
+    else:
+        form = CreditInitialForm()
+    
+    context = {'form': form, 'title': 'Enregistrer un crédit disponible initial'}
+    return render(request, 'clients/credit_initial.html', context)

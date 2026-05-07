@@ -13,6 +13,8 @@
         th { background: #f3f4f6; border-bottom: 2px solid #1e40af; text-align: left; padding: 8px; }
         td { border-bottom: 1px solid #e5e7eb; padding: 8px; }
         .right { text-align: right; }
+        .total-red { color: #dc2626; font-weight: bold; }
+        .total-cyan { color: #0891b2; font-weight: bold; }
         .footer { margin-top: 24px; font-size: 11px; color: #666; text-align: center; }
     </style>
 </head>
@@ -25,9 +27,13 @@
     </div>
 
     <div class="kpis">
-        <p><strong>Nombre de clients débiteurs:</strong> {{ total_clients|intcomma }}</p>
-        <p><strong>Montant total dû:</strong> {{ total_montant_du|floatformat:0|intcomma }} GNF</p>
+        <p><strong>Clients débiteurs:</strong> {{ total_clients_debiteurs|intcomma }} &mdash; Total net dû: <span class="total-red">{{ total_net_du|floatformat:0|intcomma }} GNF</span></p>
+        {% if clients_entreprise_doit %}
+        <p><strong>L'entreprise doit à:</strong> {{ total_clients_credit|intcomma }} client(s)</p>
+        {% endif %}
     </div>
+
+    <h2 style="color: #dc2626; font-size: 13px; margin-bottom: 6px;">Clients qui doivent à l'entreprise</h2>
 
     <table>
         <thead>
@@ -35,22 +41,55 @@
                 <th>Client</th>
                 <th>Téléphone</th>
                 <th>Adresse</th>
-                <th class="right">Montant dû</th>
+                <th class="right">Solde dû</th>
+                <th class="right">Crédit dispo.</th>
+                <th class="right">Net dû</th>
             </tr>
         </thead>
         <tbody>
-            {% for client in clients %}
+            {% for client, net in clients_debiteurs %}
             <tr>
                 <td>{{ client.nom }}</td>
                 <td>{{ client.telephone }}{% if client.telephone2 %} / {{ client.telephone2 }}{% endif %}</td>
                 <td>{{ client.quartier }}</td>
-                <td class="right">{{ client.solde_du|floatformat:0|intcomma }} GNF</td>
+                <td class="right"><strong class="total-red">{{ client.solde_du|floatformat:0|intcomma }} GNF</strong></td>
+                <td class="right">{{ client.credit_disponible|floatformat:0|intcomma }} GNF</td>
+                <td class="right">{{ net|floatformat:0|intcomma }} GNF</td>
             </tr>
             {% empty %}
-            <tr><td colspan="4">Aucun client débiteur.</td></tr>
+            <tr><td colspan="6">Aucun client débiteur.</td></tr>
             {% endfor %}
         </tbody>
     </table>
+
+    {% if clients_entreprise_doit %}
+    <h2 style="color: #0891b2; font-size: 13px; margin-top: 20px; margin-bottom: 6px;">L'entreprise doit à ces clients</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Téléphone</th>
+                <th>Adresse</th>
+                <th class="right">Crédit dispo.</th>
+                <th class="right">Solde dû</th>
+                <th class="right">Net dû au client</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client, net in clients_entreprise_doit %}
+            <tr>
+                <td>{{ client.nom }}</td>
+                <td>{{ client.telephone }}{% if client.telephone2 %} / {{ client.telephone2 }}{% endif %}</td>
+                <td>{{ client.quartier }}</td>
+                <td class="right">{{ client.credit_disponible|floatformat:0|intcomma }} GNF</td>
+                <td class="right">{{ client.solde_du|floatformat:0|intcomma }} GNF</td>
+                <td class="right"><strong class="total-cyan">{{ net|floatformat:0|intcomma }} GNF</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
 
     <div class="footer">
         Document système GesStock Madina
