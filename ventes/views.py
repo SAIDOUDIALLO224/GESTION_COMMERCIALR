@@ -84,6 +84,67 @@ class EncaissementForm(forms.Form):
     )
 
 
+class EncaissementClientForm(forms.Form):
+    client = forms.ModelChoiceField(
+        queryset=Client.objects.filter(actif=True),
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
+        label='Client'
+    )
+    montant = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'step': '0.01',
+        }),
+        label='Montant à encaisser (GNF)'
+    )
+    mode_paiement = forms.ChoiceField(
+        choices=Paiement.MODE_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
+        label='Mode de paiement'
+    )
+    reference = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+        }),
+        label='Référence (optionnel)'
+    )
+
+
+class ModifierPaiementForm(forms.Form):
+    montant = forms.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=Decimal('0.01'),
+        widget=forms.NumberInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+            'step': '0.01',
+        }),
+        label='Nouveau montant (GNF)'
+    )
+    mode_paiement = forms.ChoiceField(
+        choices=Paiement.MODE_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+        }),
+        label='Mode de paiement'
+    )
+    reference = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+        }),
+        label='Référence (optionnel)'
+    )
+
+
 @login_required
 def nouvelle_vente(request):
     if request.method == 'POST':
@@ -187,17 +248,21 @@ def nouvelle_vente(request):
                 # Mettre à jour le solde du client
                 if vente.client:
                     vente.client.solde_du += vente.solde_restant
-                    if surplus > 0:
-                        vente.client.credit_disponible += surplus
                     vente.client.save()
                 
                 if surplus > 0 and vente.client:
-                    messages.success(
-                        request,
-                        f'Vente creee avec succes. Surplus de {surplus} GNF: l\'entreprise vous doit ce montant.'
-                    )
+                    total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=vente.client))
+                    if total_solde_restant == 0:
+                        vente.client.credit_disponible += surplus
+                        vente.client.save(update_fields=['credit_disponible'])
+                        messages.success(
+                            request,
+                            f'Vente creee avec succes. Surplus de {surplus} GNF: l\'entreprise vous doit ce montant.'
+                        )
+                    else:
+                        messages.success(request, 'Vente creee avec succes.')
                 else:
-                    messages.success(request, 'Vente créée avec succès!')
+                    messages.success(request, 'Vente creee avec succes.')
                 return redirect('ventes:detail', pk=vente.pk)
     else:
         form = VenteForm()
@@ -249,7 +314,7 @@ def encaisser_paiement(request, pk):
                     vente=vente,
                     client=vente.client,
                     montant=montant,
-                    montant_surplus=surplus,
+                    montant_surplus=Decimal('0'),
                     mode_paiement=form.cleaned_data['mode_paiement'],
                     reference=form.cleaned_data.get('reference', ''),
                     notes=form.cleaned_data.get('notes', ''),
@@ -261,25 +326,11 @@ def encaisser_paiement(request, pk):
                 vente.statut = 'SOLDE' if vente.solde_restant == 0 else 'PARTIEL'
                 vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
 
-                vente.client.solde_du = max(Decimal('0'), vente.client.solde_du - montant_applique)
-                if surplus > 0:
-                    vente.client.credit_disponible += surplus
-                    vente.client.save(update_fields=['solde_du', 'credit_disponible'])
-                else:
-                    vente.client.save(update_fields=['solde_du'])
-                
-                # Si le client a tout payé, réinitialiser le crédit disponible
-                if vente.client.solde_du == 0:
-                    vente.client.credit_disponible = Decimal('0')
-                    vente.client.save(update_fields=['credit_disponible'])
+                total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=vente.client))
+                vente.client.solde_du = total_solde_restant
+                vente.client.save(update_fields=['solde_du'])
 
-            if surplus > 0:
-                messages.success(
-                    request,
-                    f'Paiement enregistre: {montant} GNF. Surplus de {surplus} GNF: l\'entreprise vous doit ce montant.'
-                )
-            else:
-                messages.success(request, f'Paiement enregistre: {montant} GNF pour la vente {vente.numero}.')
+            messages.success(request, f'Paiement enregistre: {montant} GNF pour la vente {vente.numero}.')
             return redirect('ventes:detail', pk=vente.pk)
     else:
         form = EncaissementForm(initial={'mode_paiement': 'ESPECES'})
@@ -314,6 +365,179 @@ def supprimer_vente(request, pk):
 
     messages.success(request, f'Vente {numero_vente} supprimee avec succes.')
     return redirect('ventes:liste')
+
+
+@login_required
+def encaisser_client(request):
+    if request.method == 'POST':
+        form = EncaissementClientForm(request.POST)
+        if form.is_valid():
+            client = form.cleaned_data['client']
+            montant = form.cleaned_data['montant']
+            mode_paiement = form.cleaned_data['mode_paiement']
+            reference = form.cleaned_data.get('reference', '')
+            
+            total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client))
+            
+            if total_solde_restant <= 0:
+                messages.error(request, f'{client.nom} n\'a pas de dette en cours.')
+                return redirect('ventes:encaisser_client')
+            
+            if montant > total_solde_restant:
+                surplus = montant - total_solde_restant
+            else:
+                surplus = Decimal('0')
+            
+            restant_a_distribuer = montant
+            
+            with transaction.atomic():
+                ventes_impayees = Vente.objects.filter(
+                    client=client,
+                    solde_restant__gt=0
+                ).order_by('date_vente')
+                
+                if not ventes_impayees.exists():
+                    messages.error(request, f'Aucune vente impayée pour {client.nom}.')
+                    return redirect('ventes:encaisser_client')
+                
+                paiement_principal = None
+                for vente in ventes_impayees:
+                    if restant_a_distribuer <= 0:
+                        break
+                    
+                    montant_vente = min(restant_a_distribuer, vente.solde_restant)
+                    
+                    if paiement_principal is None:
+                        paiement_principal = Paiement.objects.create(
+                            vente=vente,
+                            client=client,
+                            montant=montant_vente,
+                            montant_surplus=Decimal('0') if restant_a_distribuer <= vente.solde_restant else (restant_a_distribuer - vente.solde_restant),
+                            mode_paiement=mode_paiement,
+                            reference=reference,
+                            utilisateur=request.user
+                        )
+                    else:
+                        Paiement.objects.create(
+                            vente=vente,
+                            client=client,
+                            montant=montant_vente,
+                            montant_surplus=Decimal('0'),
+                            mode_paiement=mode_paiement,
+                            reference=reference,
+                            utilisateur=request.user
+                        )
+                    
+                    vente.montant_paye = min(vente.montant_total, vente.montant_paye + montant_vente)
+                    vente.solde_restant = max(Decimal('0'), vente.montant_total - vente.montant_paye)
+                    vente.statut = 'SOLDE' if vente.solde_restant == 0 else 'PARTIEL'
+                    vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+                    
+                    restant_a_distribuer -= montant_vente
+                
+                nouveau_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client))
+                client.solde_du = nouveau_solde_restant
+                
+                if surplus > 0 and nouveau_solde_restant == 0:
+                    client.credit_disponible += surplus
+                    client.save(update_fields=['solde_du', 'credit_disponible'])
+                else:
+                    client.save(update_fields=['solde_du'])
+            
+            if surplus > 0:
+                messages.success(request, f'Encaissement de {montant:,.0f} GNF pour {client.nom}. Surplus de {surplus:,.0f} GNF ajouté au crédit disponible.')
+            else:
+                messages.success(request, f'Encaissement de {montant:,.0f} GNF pour {client.nom}.')
+            
+            return redirect('clients:detail', pk=client.pk)
+    else:
+        form = EncaissementClientForm()
+    
+    clients_avec_dettes = Client.objects.filter(solde_du__gt=0, actif=True).order_by('nom')
+    context = {
+        'form': form,
+        'clients_avec_dettes': clients_avec_dettes,
+        'title': 'Encaissement client',
+    }
+    return render(request, 'ventes/encaisser_client.html', context)
+
+
+@login_required
+def modifier_paiement(request, pk):
+    paiement = get_object_or_404(Paiement, pk=pk)
+    
+    if request.method == 'POST':
+        form = ModifierPaiementForm(request.POST)
+        if form.is_valid():
+            ancien_montant = paiement.montant
+            ancien_surplus = paiement.surplus_effectif
+            nouveau_montant = form.cleaned_data['montant']
+            
+            vente = paiement.vente
+            client = paiement.client
+            
+            diff = nouveau_montant - ancien_montant
+            
+            with transaction.atomic():
+                paiement.montant = nouveau_montant
+                paiement.mode_paiement = form.cleaned_data['mode_paiement']
+                paiement.reference = form.cleaned_data.get('reference', '')
+                paiement.montant_surplus = Decimal('0')
+                paiement.save()
+                
+                if diff > 0:
+                    vente.montant_paye += diff
+                    vente.solde_restant = max(Decimal('0'), vente.montant_total - vente.montant_paye)
+                    vente.statut = 'SOLDE' if vente.solde_restant == 0 else 'PARTIEL'
+                    vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+                else:
+                    vente.montant_paye = max(Decimal('0'), vente.montant_paye + diff)
+                    vente.solde_restant += abs(diff)
+                    vente.statut = 'PARTIEL'
+                    vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+                
+                total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client))
+                client.solde_du = total_solde_restant
+                client.save(update_fields=['solde_du'])
+            
+            messages.success(request, f'Paiement modifié de {ancien_montant:,.0f} GNF vers {nouveau_montant:,.0f} GNF.')
+            return redirect('clients:detail', pk=client.pk)
+    else:
+        form = ModifierPaiementForm(initial={
+            'montant': paiement.montant,
+            'mode_paiement': paiement.mode_paiement,
+            'reference': paiement.reference,
+        })
+    
+    context = {
+        'form': form,
+        'paiement': paiement,
+        'title': 'Modifier le paiement',
+    }
+    return render(request, 'paiements/modifier_paiement.html', context)
+
+
+@login_required
+def supprimer_paiement(request, pk):
+    paiement = get_object_or_404(Paiement, pk=pk)
+    client_pk = paiement.client.pk
+    vente = paiement.vente
+    
+    with transaction.atomic():
+        vente.montant_paye = max(Decimal('0'), vente.montant_paye - paiement.montant)
+        vente.solde_restant = vente.montant_total - vente.montant_paye
+        vente.statut = 'EN_ATTENTE' if vente.solde_restant == vente.montant_total else ('PARTIEL' if vente.solde_restant > 0 else 'SOLDE')
+        vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+        
+        client = paiement.client
+        total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client))
+        client.solde_du = total_solde_restant
+        client.save(update_fields=['solde_du'])
+        
+        paiement.delete()
+    
+    messages.success(request, f'Paiement supprime et solde restaure.')
+    return redirect('clients:detail', pk=client_pk)
 
 
 @login_required

@@ -134,3 +134,10 @@ gesstock_django/
 ## Licence
 
 Propriétaire - Magasin Madina, Conakry, Guinée
+
+
+
+
+format BTooB
+
+environnement

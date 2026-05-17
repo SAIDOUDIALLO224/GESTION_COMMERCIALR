@@ -26,12 +26,12 @@
             <p class="text-sm text-gray-500">{{ client.quartier|default:'Adresse non renseignée' }}</p>
         </div>
         <div class="flex items-center gap-2">
-            <!-- {% if ventes_a_encaisser %}
-            <a href="{% url 'ventes:encaisser' ventes_a_encaisser.0.pk %}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V7m0 9v1m-7-7h14"/></svg>
-                Encaisser une dette
+            {% if client.solde_du > 0 %}
+            <a href="{% url 'ventes:encaisser_client' %}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                Encaissement
             </a>
-            {% endif %} -->
+            {% endif %}
             {% if client.credit_disponible > 0 %}
             <a href="{% url 'clients:remboursement_surplus' client.pk %}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
         <div class="rounded-lg border border-gray-200 p-4">
             <p class="text-xs uppercase tracking-wide font-semibold text-gray-500">Solde dû</p>
             <p class="mt-1 text-2xl font-bold {% if client.solde_du > 0 %}text-red-700{% else %}text-green-700{% endif %}">{{ client.solde_du|intcomma }}</p>
@@ -61,6 +61,11 @@
             <p class="text-xs uppercase tracking-wide font-semibold text-gray-500">Total payé</p>
             <p class="mt-1 text-2xl font-bold text-green-700">{{ total_paye|intcomma }}</p>
             <p class="text-xs text-gray-400">GNF</p>
+        </div>
+        <div class="rounded-lg border border-red-200 p-4">
+            <p class="text-xs uppercase tracking-wide font-semibold text-red-700">Reste à payer</p>
+            <p class="mt-1 text-2xl font-bold text-red-700">{{ total_solde_restant|intcomma }}</p>
+            <p class="text-xs text-red-400">GNF</p>
         </div>
         <div class="rounded-lg border border-cyan-200 p-4">
             <p class="text-xs uppercase tracking-wide font-semibold text-cyan-700">Crédit disponible</p>
@@ -118,12 +123,7 @@
                             {% endif %}
                         </td>
                         <td class="px-4 py-3 text-right">
-                            <div class="inline-flex items-center gap-2">
-                                {% if vente.solde_restant > 0 %}
-                                <a href="{% url 'ventes:encaisser' vente.pk %}" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">Encaisser</a>
-                                {% endif %}
-                                <a href="{% url 'ventes:detail' vente.pk %}" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors">Voir</a>
-                            </div>
+                            <a href="{% url 'ventes:detail' vente.pk %}" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-colors">Voir</a>
                         </td>
                     </tr>
                     {% endfor %}
@@ -145,17 +145,19 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-600">Vente</th>
                         <th class="px-4 py-3 text-right font-semibold text-gray-600">Montant</th>
                         <th class="px-4 py-3 text-right font-semibold text-gray-600">Surplus</th>
                         <th class="px-4 py-3 text-left font-semibold text-gray-600">Mode</th>
                         <th class="px-4 py-3 text-left font-semibold text-gray-600">Référence</th>
-                        <th class="px-4 py-3 text-right font-semibold text-gray-600">Reçu</th>
+                        <th class="px-4 py-3 text-right font-semibold text-gray-600">Action</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
                     {% for paiement in paiements %}
                     <tr>
                         <td class="px-4 py-3 text-gray-600">{{ paiement.date_paiement|date:"d/m/Y H:i" }}</td>
+                        <td class="px-4 py-3 text-blue-700 font-medium">{{ paiement.vente.numero }}</td>
                         <td class="px-4 py-3 text-right font-semibold text-green-700">{{ paiement.montant|intcomma }} GNF</td>
                         <td class="px-4 py-3 text-right">
                             {% if paiement.surplus_effectif > 0 %}
@@ -167,7 +169,11 @@
                         <td class="px-4 py-3 text-gray-700">{{ paiement.get_mode_paiement_display }}</td>
                         <td class="px-4 py-3 text-gray-500">{{ paiement.reference|default:'—' }}</td>
                         <td class="px-4 py-3 text-right">
-                            <a href="{% url 'paiements:recu' paiement.pk %}" target="_blank" class="inline-flex items-center px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">Imprimer</a>
+                            <div class="inline-flex items-center gap-2">
+                                <a href="{% url 'ventes:modifier_paiement' paiement.pk %}" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">Modifier</a>
+                                <a href="{% url 'ventes:supprimer_paiement' paiement.pk %}" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors" onclick="return confirm('Supprimer ce paiement ?');">Supprimer</a>
+                                <a href="{% url 'paiements:recu' paiement.pk %}" target="_blank" class="px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors">Imprimer</a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}

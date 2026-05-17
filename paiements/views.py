@@ -9,6 +9,7 @@ from .models import Paiement, CompteEcoBanqueClient
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .forms import CompteEcoBanqueClientForm
+from core.models import Configuration
 
 
 @login_required
@@ -29,34 +30,48 @@ def imprimer_recu(request, pk):
 	return response
 
 
+def get_solde_compte_bancaire():
+    config = Configuration.objects.first()
+    if config:
+        return config.solde_compte_bancaire
+    return Decimal('0')
+
+def set_solde_compte_bancaire(montant):
+    config = Configuration.objects.first()
+    if config:
+        config.solde_compte_bancaire = montant
+        config.save(update_fields=['solde_compte_bancaire'])
+
+def ajouter_solde_compte_bancaire(montant):
+    config = Configuration.objects.first()
+    if config:
+        config.solde_compte_bancaire += montant
+        config.save(update_fields=['solde_compte_bancaire'])
+
+
 @login_required
 def comptes_ecobanque_liste(request):
     comptes = CompteEcoBanqueClient.objects.select_related('client', 'utilisateur').order_by('-date_creation')
     
-    # Calculer les totaux globaux
     total_montants_sortis_global = comptes.aggregate(total=models.Sum('montant_sorti'))['total'] or Decimal('0')
     total_montants_entrants_global = comptes.aggregate(
         total=models.Sum(models.F('montant_verset') + models.F('montant_initial'))
     )['total'] or Decimal('0')
     
-    # Gérer la mise à jour manuelle du montant exact du compte
-    montant_exact_compte = None
+    montant_exact_compte = get_solde_compte_bancaire()
+    
     if request.method == 'POST' and 'update_montant_exact' in request.POST:
         montant_exact = request.POST.get('montant_exact_compte')
         if montant_exact:
             try:
                 montant_exact_compte = Decimal(montant_exact)
-                # Sauvegarder en session pour persister entre les requêtes
-                request.session['montant_exact_compte_global'] = str(montant_exact_compte)
-                messages.success(request, f"Montant exact du compte bancaire mis à jour : {montant_exact_compte} GNF")
+                set_solde_compte_bancaire(montant_exact_compte)
+                montant_exact_compte = get_solde_compte_bancaire()
+                messages.success(request, f"Montant exact du compte bancaire mis a jour : {montant_exact_compte} GNF")
             except (ValueError, TypeError):
                 messages.error(request, "Montant invalide.")
         else:
             messages.error(request, "Veuillez saisir un montant.")
-    
-    # Récupérer le montant exact depuis la session
-    if 'montant_exact_compte_global' in request.session:
-        montant_exact_compte = Decimal(request.session['montant_exact_compte_global'])
     
     context = {
         'comptes': comptes,
@@ -98,16 +113,12 @@ def comptes_ecobanque_form(request, pk=None):
             
             ajustement_total = difference_entrant - difference_sorti
             
-            if ajustement_total != 0 and 'montant_exact_compte_global' in request.session:
-                montant_exact_actuel = Decimal(request.session['montant_exact_compte_global'])
-                nouveau_montant_exact = montant_exact_actuel + ajustement_total
-                request.session['montant_exact_compte_global'] = str(nouveau_montant_exact)
-            elif ajustement_total != 0:
-                nouveau_montant_exact = ajustement_total
-                request.session['montant_exact_compte_global'] = str(nouveau_montant_exact)
+            if ajustement_total != 0:
+                solde_actuel = get_solde_compte_bancaire()
+                set_solde_compte_bancaire(solde_actuel + ajustement_total)
             
             compte.save()
-            messages.success(request, f"Compte {compte.client.nom} enregistré avec succès.")
+            messages.success(request, f"Compte {compte.client.nom} enregistre avec succes.")
             return redirect('paiements:comptes_ecobanque_liste')
     else:
         form = CompteEcoBanqueClientForm(instance=compte)
@@ -129,29 +140,9 @@ def compte_ecobanque_supprimer(request, pk):
     montant_sorti_a_ajouter = compte.montant_sorti
     ajustement = montant_sorti_a_ajouter - montant_entrant_a_soustraire
     
-    if 'montant_exact_compte_global' in request.session:
-        montant_exact_actuel = Decimal(request.session['montant_exact_compte_global'])
-        nouveau_montant_exact = montant_exact_actuel + ajustement
-        request.session['montant_exact_compte_global'] = str(nouveau_montant_exact)
+    solde_actuel = get_solde_compte_bancaire()
+    set_solde_compte_bancaire(solde_actuel + ajustement)
     
     compte.delete()
-    messages.success(request, f"Compte de {client_nom} supprimé avec succès.")
+    messages.success(request, f"Compte de {client_nom} supprime avec succes.")
     return redirect('paiements:comptes_ecobanque_liste')
-
-
-@login_required
-def imprimer_recu(request, pk):
-	paiement = get_object_or_404(
-		Paiement.objects.select_related('vente', 'client', 'utilisateur'),
-		pk=pk,
-	)
-
-	context = {
-		'paiement': paiement,
-	}
-	html_string = render_to_string('paiements/recu_pdf.html', context)
-	pdf = HTML(string=html_string).write_pdf()
-
-	response = HttpResponse(pdf, content_type='application/pdf')
-	response['Content-Disposition'] = f'inline; filename="recu_paiement_{paiement.id}.pdf"'
-	return response

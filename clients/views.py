@@ -169,6 +169,8 @@ def detail_client(request, pk):
     total_paye = ventes.aggregate(total=Sum('montant_paye'))['total'] or 0
     total_surplus = paiements.aggregate(total=Sum('montant_surplus'))['total'] or 0
     
+    total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client))
+    
     context = {
         'client': client,
         'ventes': ventes,
@@ -177,6 +179,7 @@ def detail_client(request, pk):
         'total_ventes': total_ventes,
         'total_paye': total_paye,
         'total_surplus': total_surplus,
+        'total_solde_restant': total_solde_restant,
     }
     return render(request, 'clients/detail.html', context)
 

@@ -9,6 +9,10 @@ class Configuration(models.Model):
     telephone_magasin = models.CharField(max_length=20, blank=True, verbose_name=_("Téléphone"))
     email_magasin = models.EmailField(blank=True, verbose_name=_("Email"))
     devise = models.CharField(max_length=10, default="GNF", verbose_name=_("Devise"))
+    solde_compte_bancaire = models.DecimalField(
+        max_digits=18, decimal_places=2, default=0,
+        verbose_name=_("Solde du compte bancaire")
+    )
     
     class Meta:
         verbose_name = _("Configuration")
