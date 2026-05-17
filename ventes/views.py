@@ -453,10 +453,8 @@ def encaisser_client(request):
     else:
         form = EncaissementClientForm()
     
-    clients_avec_dettes = Client.objects.filter(solde_du__gt=0, actif=True).order_by('nom')
     context = {
         'form': form,
-        'clients_avec_dettes': clients_avec_dettes,
         'title': 'Encaissement client',
     }
     return render(request, 'ventes/encaisser_client.html', context)
