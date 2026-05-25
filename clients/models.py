@@ -30,7 +30,7 @@ class Client(models.Model):
     notes = models.TextField(blank=True, verbose_name=_("Notes"))
     actif = models.BooleanField(default=True, verbose_name=_("Actif"))
     magasin = models.ForeignKey(
-        'core.Magasin', on_delete=models.CASCADE, null=True, blank=True,
+        'core.Magasin', on_delete=models.SET_NULL, null=True, blank=True,
         verbose_name=_("Magasin")
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Créé le"))

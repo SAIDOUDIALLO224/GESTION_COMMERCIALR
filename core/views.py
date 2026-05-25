@@ -268,9 +268,7 @@ def supprimer_magasin(request, pk):
             MouvementStock.objects.filter(magasin=magasin).delete()
             Vente.objects.filter(magasin=magasin).delete()
             Produit.objects.filter(magasin=magasin).delete()
-            Categorie.objects.filter(magasin=magasin).delete()
-            Client.objects.filter(magasin=magasin).delete()
-            # Ne PAS supprimer les profils : SET_NULL mettra magasin=NULL automatiquement
+            # Catégories, clients et profils : SET_NULL mettra magasin=NULL automatiquement
             magasin.delete()
         messages.success(request, f'Magasin "{nom}" et toutes ses données supprimés.')
     return redirect('core:liste_magasins')
