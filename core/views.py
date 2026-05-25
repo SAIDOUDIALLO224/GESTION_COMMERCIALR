@@ -269,10 +269,14 @@ def supprimer_magasin(request, pk):
 
 @login_required
 def detail_magasin(request, pk):
-    magasins_visibles = get_magasins_visibles(request.user)
-    magasin = get_object_or_404(magasins_visibles.annotate(
+    magasin = get_object_or_404(Magasin.objects.annotate(
         nb_utilisateurs=Count('profilutilisateur'),
     ), pk=pk)
+    if not request.user.is_superuser:
+        profil = getattr(request.user, 'profilutilisateur', None)
+        if not profil or profil.magasin_id != magasin.pk:
+            messages.error(request, "Accès refusé : vous n'êtes pas autorisé à voir ce magasin.")
+            return redirect('core:liste_magasins')
 
     from django.utils import timezone
     aujourd_hui = timezone.now().date()
