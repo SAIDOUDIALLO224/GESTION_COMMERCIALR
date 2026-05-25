@@ -23,7 +23,7 @@ class VenteForm(forms.Form):
         magasin = kwargs.pop('magasin', None)
         super().__init__(*args, **kwargs)
         if magasin:
-            self.fields['client'].queryset = Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True))
+            self.fields['client'].queryset = Client.objects.filter(magasin=magasin)
 
     client = forms.ModelChoiceField(
         queryset=Client.objects.all(),
@@ -96,8 +96,7 @@ class EncaissementClientForm(forms.Form):
         magasin = kwargs.pop('magasin', None)
         super().__init__(*args, **kwargs)
         if magasin:
-            self.fields['client'].queryset = Client.objects.filter(actif=True).filter(
-                Q(magasin=magasin) | Q(magasin__isnull=True))
+            self.fields['client'].queryset = Client.objects.filter(actif=True, magasin=magasin)
 
     client = forms.ModelChoiceField(
         queryset=Client.objects.filter(actif=True),

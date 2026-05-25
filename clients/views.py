@@ -35,7 +35,7 @@ class DetteInitialeForm(forms.Form):
         magasin = kwargs.pop('magasin', None)
         super().__init__(*args, **kwargs)
         if magasin:
-            self.fields['client'].queryset = Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True))
+            self.fields['client'].queryset = Client.objects.filter(magasin=magasin)
 
     client = forms.ModelChoiceField(
         queryset=Client.objects.all(),
@@ -107,7 +107,7 @@ class CreditInitialForm(forms.Form):
         magasin = kwargs.pop('magasin', None)
         super().__init__(*args, **kwargs)
         if magasin:
-            self.fields['client'].queryset = Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True))
+            self.fields['client'].queryset = Client.objects.filter(magasin=magasin)
 
     client = forms.ModelChoiceField(
         queryset=Client.objects.all(),
@@ -142,7 +142,7 @@ class CreditInitialForm(forms.Form):
 def liste_clients(request):
     search = request.GET.get('search', '')
     magasin = get_current_magasin(request.user)
-    clients = Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True))
+    clients = Client.objects.filter(magasin=magasin)
     
     if search:
         clients = clients.filter(Q(nom__icontains=search) | Q(telephone__icontains=search))
@@ -176,7 +176,7 @@ def liste_clients(request):
 @login_required
 def detail_client(request, pk):
     magasin = get_current_magasin(request.user)
-    client = get_object_or_404(Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)), pk=pk)
+    client = get_object_or_404(Client.objects.filter(magasin=magasin), pk=pk)
     magasins = get_magasins_visibles(request.user)
     ventes = Vente.objects.filter(client=client).filter(
         Q(magasin__in=magasins)
@@ -237,7 +237,7 @@ def creer_client(request):
 @login_required
 def modifier_client(request, pk):
     magasin = get_current_magasin(request.user)
-    client = get_object_or_404(Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)), pk=pk)
+    client = get_object_or_404(Client.objects.filter(magasin=magasin), pk=pk)
     if request.method == 'POST':
         form = ClientForm(request.POST, instance=client)
         if form.is_valid():
@@ -254,7 +254,7 @@ def modifier_client(request, pk):
 @login_required
 def supprimer_client(request, pk):
     magasin = get_current_magasin(request.user)
-    client = get_object_or_404(Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)), pk=pk)
+    client = get_object_or_404(Client.objects.filter(magasin=magasin), pk=pk)
     if request.method == 'POST':
         nom = client.nom
         client.delete()
@@ -270,7 +270,7 @@ def imprimer_clients_debiteurs(request):
     
     magasin = get_current_magasin(request.user)
     magasins = get_magasins_visibles(request.user)
-    clients_du_magasin = Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True))
+    clients_du_magasin = Client.objects.filter(magasin=magasin)
     clients_debiteurs = clients_du_magasin.filter(solde_du__gt=0).filter(
         Q(vente__magasin__in=magasins)
     ).distinct().order_by('nom')
@@ -375,7 +375,7 @@ def dette_initiale(request):
 @login_required
 def remboursement_surplus(request, pk):
     magasin = get_current_magasin(request.user)
-    client = get_object_or_404(Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)), pk=pk)
+    client = get_object_or_404(Client.objects.filter(magasin=magasin), pk=pk)
     
     if client.credit_disponible <= 0:
         messages.error(request, 'Ce client n\'a pas de crédit disponible à rembourser.')

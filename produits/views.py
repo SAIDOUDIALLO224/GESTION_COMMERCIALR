@@ -34,9 +34,7 @@ class ProduitForm(forms.ModelForm):
             self.ancien_stock_actuel = self.instance.stock_actuel
             self.ancien_seuil_alerte = self.instance.seuil_alerte
         if magasin:
-            self.fields['categorie'].queryset = Categorie.objects.filter(
-                Q(magasin=magasin) | Q(magasin__isnull=True)
-            )
+            self.fields['categorie'].queryset = Categorie.objects.filter(magasin=magasin)
 
     class Meta:
         model = Produit
@@ -97,7 +95,7 @@ def liste_produits(request):
     page_obj = paginator.get_page(page_number)
 
     current = get_current_magasin(request.user)
-    categories = Categorie.objects.filter(Q(magasin=current) | Q(magasin__isnull=True)).annotate(nb_produits=Count('produit')).order_by('nom')
+    categories = Categorie.objects.filter(magasin=current).annotate(nb_produits=Count('produit')).order_by('nom')
     context = {
         'page_obj': page_obj,
         'produits': page_obj.object_list,
@@ -198,7 +196,7 @@ def creer_produit(request):
     context = {
         'form': form,
         'title': 'Créer un produit',
-        'has_categories': Categorie.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)).exists(),
+        'has_categories': Categorie.objects.filter(magasin=magasin).exists(),
     }
     
     if request.headers.get('HX-Request'):
@@ -226,7 +224,7 @@ def modifier_produit(request, pk):
         'form': form,
         'produit': produit,
         'title': 'Modifier le produit',
-        'has_categories': Categorie.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)).exists(),
+        'has_categories': Categorie.objects.filter(magasin=magasin).exists(),
     }
     return render(request, 'produits/form.html', context)
 
@@ -250,7 +248,7 @@ def supprimer_produit(request, pk):
 def _categories_list_response(request):
     """Helper: returns the categories partial with fresh data."""
     current = get_current_magasin(request.user)
-    categories = Categorie.objects.filter(Q(magasin=current) | Q(magasin__isnull=True)).annotate(nb_produits=Count('produit')).order_by('nom')
+    categories = Categorie.objects.filter(magasin=current).annotate(nb_produits=Count('produit')).order_by('nom')
     return render(request, 'produits/partials/categories.html', {'categories': categories})
 
 
@@ -275,7 +273,7 @@ def creer_categorie(request):
 @gerant_required
 def modifier_categorie(request, pk):
     current = get_current_magasin(request.user)
-    categorie = get_object_or_404(Categorie.objects.filter(Q(magasin=current) | Q(magasin__isnull=True)), pk=pk)
+    categorie = get_object_or_404(Categorie.objects.filter(magasin=current), pk=pk)
     if request.method == 'POST':
         form = CategorieForm(request.POST, instance=categorie)
         if form.is_valid():
@@ -292,12 +290,12 @@ def modifier_categorie(request, pk):
 @gerant_required
 def supprimer_categorie(request, pk):
     current = get_current_magasin(request.user)
-    categorie = get_object_or_404(Categorie.objects.filter(Q(magasin=current) | Q(magasin__isnull=True)), pk=pk)
+    categorie = get_object_or_404(Categorie.objects.filter(magasin=current), pk=pk)
     if request.method == 'POST':
         try:
             categorie.delete()
         except Exception:
-            categories = Categorie.objects.filter(Q(magasin=current) | Q(magasin__isnull=True)).annotate(nb_produits=Count('produit')).order_by('nom')
+            categories = Categorie.objects.filter(magasin=current).annotate(nb_produits=Count('produit')).order_by('nom')
             return render(request, 'produits/partials/categories.html', {
                 'categories': categories,
                 'delete_error': f'Impossible de supprimer «{categorie.nom}» : des produits y sont rattachés.',
