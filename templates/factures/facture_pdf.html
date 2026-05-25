@@ -26,8 +26,9 @@
     {% load humanize l10n %}
     <div class="header">
         <h1>FACTURE</h1>
-        <p>{{ magasin }}</p>
-        <p>{{ adresse }}</p>
+        {% if current_magasin and not current_magasin.est_principal %}
+        <p>{{ current_magasin.nom }} — {{ current_magasin.adresse|default:"Marché de Madina, Conakry, Guinée" }}</p>
+        {% endif %}
     </div>
 
     <div class="info">

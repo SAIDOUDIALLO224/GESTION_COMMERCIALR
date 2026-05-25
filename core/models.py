@@ -2,6 +2,27 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+class Magasin(models.Model):
+    """Magasin / dépôt"""
+    nom = models.CharField(max_length=100, unique=True, verbose_name=_("Nom"))
+    adresse = models.TextField(blank=True, verbose_name=_("Adresse"))
+    actif = models.BooleanField(default=True, verbose_name=_("Actif"))
+    est_principal = models.BooleanField(default=False, verbose_name=_("Magasin principal"))
+    magasins_visibles = models.ManyToManyField(
+        'self', symmetrical=False, blank=True,
+        verbose_name=_("Magasins dont les données sont visibles")
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Créé le"))
+
+    class Meta:
+        verbose_name = _("Magasin")
+        verbose_name_plural = _("Magasins")
+        ordering = ['nom']
+
+    def __str__(self):
+        return self.nom
+
+
 class Configuration(models.Model):
     """Configuration globale de l'application"""
     nom_magasin = models.CharField(max_length=200, default="Magasin Madina", verbose_name=_("Nom du magasin"))

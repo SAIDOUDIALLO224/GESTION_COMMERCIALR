@@ -21,6 +21,7 @@
 
     <div class="header">
         <h1>Paiements Journaliers</h1>
+        {% if current_magasin and not current_magasin.est_principal %}<p class="meta" style="font-weight:bold; color:#1e40af;">{{ current_magasin.nom }} — {{ current_magasin.adresse|default:"Marché de Madina, Conakry, Guinée" }}</p>{% endif %}
         <p class="meta">Date : {{ date_paiement|date:"d/m/Y" }}</p>
         <p class="meta">Généré le {% now "d/m/Y à H:i" %}</p>
     </div>

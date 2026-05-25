@@ -10,9 +10,18 @@ from produits.models import Produit
 from fournisseurs.models import Fournisseur
 from weasyprint import HTML
 from django import forms
+from core.utils import get_magasins_visibles, get_current_magasin
 
 
 class AjustementStockForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        magasins = kwargs.pop('magasins', None)
+        super().__init__(*args, **kwargs)
+        if magasins is not None:
+            self.fields['produit'].queryset = Produit.objects.filter(
+                Q(magasin__in=magasins)
+            )
+
     produit = forms.ModelChoiceField(
         queryset=Produit.objects.all(),
         widget=forms.Select(attrs={
@@ -66,8 +75,9 @@ class AjustementStockForm(forms.Form):
 
 @login_required
 def ajuster_stock(request):
+    magasins = get_magasins_visibles(request.user)
     if request.method == 'POST':
-        form = AjustementStockForm(request.POST)
+        form = AjustementStockForm(request.POST, magasins=magasins)
         if form.is_valid():
             produit = form.cleaned_data['produit']
             quantite = form.cleaned_data['quantite']
@@ -82,7 +92,8 @@ def ajuster_stock(request):
                 quantite=quantite,
                 fournisseur=fournisseur,
                 motif=motif,
-                utilisateur=request.user
+                utilisateur=request.user,
+                magasin=get_current_magasin(request.user),
             )
             
             # Mettre à jour le stock
@@ -96,13 +107,15 @@ def ajuster_stock(request):
             messages.success(request, 'Ajustement de stock enregistré!')
             return redirect('stock:ajuster')
     else:
-        form = AjustementStockForm()
+        form = AjustementStockForm(magasins=magasins)
     
-    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur', 'fournisseur').all().order_by('-created_at')[:20]
-    total_mouvements = MouvementStock.objects.count()
-    total_entrees = MouvementStock.objects.filter(type_mvt='ENTREE').count()
-    total_sorties = MouvementStock.objects.filter(type_mvt='SORTIE').count()
-    produits_alerte = Produit.objects.filter(stock_actuel__lte=F('seuil_alerte')).count()
+    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur', 'fournisseur').filter(Q(magasin__in=magasins)).order_by('-created_at')[:20]
+    total_mouvements = MouvementStock.objects.filter(Q(magasin__in=magasins)).count()
+    total_entrees = MouvementStock.objects.filter(Q(magasin__in=magasins), type_mvt='ENTREE').count()
+    total_sorties = MouvementStock.objects.filter(Q(magasin__in=magasins), type_mvt='SORTIE').count()
+    produits_alerte = Produit.objects.filter(
+        stock_actuel__lte=F('seuil_alerte')
+    ).filter(Q(magasin__in=magasins)).count()
     
     context = {
         'form': form,
@@ -120,7 +133,10 @@ def imprimer_inventaire(request):
     search = request.GET.get('search', '')
     categorie_id = request.GET.get('categorie', '')
 
-    produits = Produit.objects.select_related('categorie').annotate(
+    magasins = get_magasins_visibles(request.user)
+    produits = Produit.objects.select_related('categorie').filter(
+        Q(magasin__in=magasins)
+    ).annotate(
         valeur_stock=ExpressionWrapper(
             F('stock_actuel') * F('prix_achat'),
             output_field=DecimalField(max_digits=18, decimal_places=2)
@@ -137,13 +153,15 @@ def imprimer_inventaire(request):
     for produit in produits:
         stock_initial = MouvementStock.objects.filter(
             produit=produit,
-            type_mvt__in=['ENTREE', 'AJUSTEMENT', 'INVENTAIRE']
+            type_mvt__in=['ENTREE', 'AJUSTEMENT', 'INVENTAIRE'],
+            magasin__in=magasins,
         ).aggregate(
             total=Coalesce(Sum('quantite'), Value(0, output_field=DecimalField(max_digits=12, decimal_places=3)))
         )['total']
         quantite_sortie = MouvementStock.objects.filter(
             produit=produit,
-            type_mvt='SORTIE'
+            type_mvt='SORTIE',
+            magasin__in=magasins,
         ).aggregate(
             total=Coalesce(Sum('quantite'), Value(0, output_field=DecimalField(max_digits=12, decimal_places=3)))
         )['total']
@@ -164,7 +182,7 @@ def imprimer_inventaire(request):
         'categorie_nom': categorie_nom,
     }
 
-    html_string = render_to_string('stock/inventaire_pdf.html', context)
+    html_string = render_to_string('stock/inventaire_pdf.html', context, request=request)
     pdf = HTML(string=html_string).write_pdf()
 
     response = HttpResponse(pdf, content_type='application/pdf')

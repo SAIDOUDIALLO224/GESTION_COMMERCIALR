@@ -26,6 +26,9 @@
     <div class="wrapper">
         <div class="header">
             <h1>Reçu de Paiement</h1>
+            {% if current_magasin and not current_magasin.est_principal %}
+            <p class="muted">{{ current_magasin.nom }} — {{ current_magasin.adresse|default:"Marché de Madina, Conakry, Guinée" }}</p>
+            {% endif %}
             <p class="muted">N° Reçu: REC-{{ paiement.id }} • Émis le {% now "d/m/Y à H:i" %}</p>
         </div>
 
@@ -54,12 +57,6 @@
                 <td class="label">Référence :</td>
                 <td class="value">{{ paiement.reference|default:"—" }}</td>
             </tr>
-            {% if paiement.surplus_effectif > 0 %}
-            <tr>
-                <td class="label">Montant surplus :</td>
-                <td class="value">{{ paiement.surplus_effectif|floatformat:0|intcomma }} GNF - L'entreprise vous doit ce montant.</td>
-            </tr>
-            {% endif %}
             <tr>
                 <td class="label">Enregistré par :</td>
                 <td class="value">{{ paiement.utilisateur.username|default:"—" }}</td>

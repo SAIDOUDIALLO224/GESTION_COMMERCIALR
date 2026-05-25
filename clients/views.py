@@ -9,6 +9,7 @@ from paiements.models import Paiement
 from django import forms
 from decimal import Decimal
 import uuid
+from core.utils import get_magasins_visibles, get_current_magasin
 
 
 class ClientForm(forms.ModelForm):
@@ -132,6 +133,7 @@ def liste_clients(request):
     
     if search:
         clients = clients.filter(Q(nom__icontains=search) | Q(telephone__icontains=search))
+    clients = clients.order_by('nom')
 
     paginator = Paginator(clients, 25)
     page_number = request.GET.get('page')
@@ -161,15 +163,24 @@ def liste_clients(request):
 @login_required
 def detail_client(request, pk):
     client = get_object_or_404(Client, pk=pk)
-    ventes = Vente.objects.filter(client=client).order_by('-date_vente')[:30]
-    ventes_a_encaisser = Vente.objects.filter(client=client, solde_restant__gt=0).order_by('-date_vente')
-    paiements = Paiement.objects.filter(client=client).order_by('-date_paiement')[:30]
+    magasins = get_magasins_visibles(request.user)
+    ventes = Vente.objects.filter(client=client).filter(
+        Q(magasin__in=magasins)
+    ).order_by('-date_vente')[:30]
+    ventes_a_encaisser = Vente.objects.filter(client=client, solde_restant__gt=0).filter(
+        Q(magasin__in=magasins)
+    ).order_by('-date_vente')
+    paiements = Paiement.objects.filter(client=client).filter(
+        Q(vente__magasin__in=magasins)
+    ).order_by('-date_paiement')[:30]
 
     total_ventes = ventes.aggregate(total=Sum('montant_total'))['total'] or 0
     total_paye = ventes.aggregate(total=Sum('montant_paye'))['total'] or 0
     total_surplus = paiements.aggregate(total=Sum('montant_surplus'))['total'] or 0
     
-    total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client))
+    total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client).filter(
+        Q(magasin__in=magasins)
+    ))
     
     context = {
         'client': client,
@@ -239,10 +250,15 @@ def imprimer_clients_debiteurs(request):
     from django.template.loader import render_to_string
     from weasyprint import HTML
     
-    clients_debiteurs = Client.objects.filter(solde_du__gt=0).order_by('nom')
+    magasins = get_magasins_visibles(request.user)
+    clients_debiteurs = Client.objects.filter(solde_du__gt=0).filter(
+        Q(vente__magasin__in=magasins)
+    ).distinct().order_by('nom')
     clients_entreprise_doit = Client.objects.filter(
         credit_disponible__gt=F('solde_du')
-    ).order_by('nom')
+    ).filter(
+        Q(vente__magasin__in=magasins)
+    ).distinct().order_by('nom')
     
     clients_debiteurs_data = []
     total_net_du = Decimal('0')
@@ -264,7 +280,7 @@ def imprimer_clients_debiteurs(request):
         'total_net_du': total_net_du,
     }
     
-    html_string = render_to_string('clients/pdf_debiteurs.html', context)
+    html_string = render_to_string('clients/pdf_debiteurs.html', context, request=request)
     pdf = HTML(string=html_string).write_pdf()
     
     response = HttpResponse(pdf, content_type='application/pdf')
@@ -290,19 +306,41 @@ def dette_initiale(request):
             
             numero = f"DETTE-INIT-{uuid.uuid4().hex[:8].upper()}"
             
+            # Appliquer le crédit disponible du client si existant
+            credit_used = Decimal('0')
+            if client.credit_disponible > 0:
+                credit_used = min(client.credit_disponible, montant)
+                client.credit_disponible -= credit_used
+            
+            solde_restant = montant - credit_used
+            statut = 'SOLDE' if solde_restant == 0 else 'EN_ATTENTE'
+            
             vente = Vente.objects.create(
                 numero=numero,
                 client=client,
                 montant_total=montant,
-                montant_paye=Decimal('0'),
-                solde_restant=montant,
-                statut='EN_ATTENTE',
+                montant_paye=credit_used,
+                solde_restant=solde_restant,
+                statut=statut,
                 notes=notes,
                 utilisateur=request.user,
+                magasin=get_current_magasin(request.user),
             )
             
-            client.solde_du += montant
-            client.save(update_fields=['solde_du'])
+            if credit_used > 0:
+                from paiements.models import Paiement
+                Paiement.objects.create(
+                    vente=vente,
+                    client=client,
+                    montant=credit_used,
+                    montant_surplus=Decimal('0'),
+                    mode_paiement='CREDIT',
+                    notes='Crédit disponible appliqué sur dette initiale',
+                    utilisateur=request.user,
+                )
+            
+            client.solde_du += solde_restant
+            client.save(update_fields=['solde_du', 'credit_disponible'])
             
             messages.success(request, f'Dette initiale de {montant:,.0f} GNF enregistrée pour {client.nom}.')
             return redirect('clients:detail', pk=client.pk)

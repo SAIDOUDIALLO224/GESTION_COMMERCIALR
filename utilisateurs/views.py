@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import ProfilUtilisateur
+from core.models import Magasin
 
 
 class UtilisateurCreationForm(forms.Form):
@@ -80,6 +81,14 @@ class UtilisateurCreationForm(forms.Form):
 			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
 		}),
 	)
+	magasin = forms.ModelChoiceField(
+		queryset=Magasin.objects.all(),
+		required=False,
+		label='Magasin',
+		widget=forms.Select(attrs={
+			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
+		}),
+	)
 
 	def clean_username(self):
 		username = self.cleaned_data['username'].strip()
@@ -150,6 +159,14 @@ class UtilisateurEditionForm(forms.Form):
 		label='Nouveau mot de passe (optionnel)',
 		widget=forms.PasswordInput(attrs={
 			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+		}),
+	)
+	magasin = forms.ModelChoiceField(
+		queryset=Magasin.objects.all(),
+		required=False,
+		label='Magasin',
+		widget=forms.Select(attrs={
+			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
 		}),
 	)
 
@@ -241,12 +258,13 @@ def creer_utilisateur(request):
 					is_superuser=False,
 					is_active=True,
 				)
-				ProfilUtilisateur.objects.create(
-					user=user,
-					role=form.cleaned_data['role'],
-					telephone=form.cleaned_data['telephone'],
-					actif=True,
-				)
+			ProfilUtilisateur.objects.create(
+				user=user,
+				role=form.cleaned_data['role'],
+				telephone=form.cleaned_data['telephone'],
+				actif=True,
+				magasin=form.cleaned_data.get('magasin'),
+			)
 
 			messages.success(request, f"Utilisateur {user.username} cree avec succes.")
 			return redirect('utilisateurs:liste')
@@ -283,6 +301,7 @@ def modifier_utilisateur(request, pk):
 
 			profil.role = form.cleaned_data['role']
 			profil.telephone = form.cleaned_data['telephone']
+			profil.magasin = form.cleaned_data.get('magasin')
 			profil.actif = user_obj.is_active
 			profil.save()
 
@@ -296,6 +315,7 @@ def modifier_utilisateur(request, pk):
 			'telephone': profil.telephone,
 			'role': profil.role,
 			'est_admin': user_obj.is_staff,
+			'magasin': profil.magasin,
 		})
 
 	context = {

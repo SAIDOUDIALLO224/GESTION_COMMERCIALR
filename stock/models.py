@@ -26,6 +26,10 @@ class MouvementStock(models.Model):
         max_digits=12, decimal_places=2, null=True, blank=True,
         verbose_name=_("Prix unitaire")
     )
+    magasin = models.ForeignKey(
+        'core.Magasin', on_delete=models.PROTECT, null=True, blank=True,
+        verbose_name=_("Magasin")
+    )
     utilisateur = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True,
         verbose_name=_("Utilisateur")

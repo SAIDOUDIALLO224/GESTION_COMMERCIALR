@@ -20,6 +20,7 @@
     {% load humanize %}
     <div class="header">
         <h1>Rapport des Ventes</h1>
+        {% if current_magasin and not current_magasin.est_principal %}<p class="meta" style="font-weight:bold; color:#1e40af;">{{ current_magasin.nom }} — {{ current_magasin.adresse|default:"Marché de Madina, Conakry, Guinée" }}</p>{% endif %}
         <p class="meta">
             Periode: {{ date_debut|default:"Debut" }} - {{ date_fin|default:"Aujourd'hui" }}
         </p>

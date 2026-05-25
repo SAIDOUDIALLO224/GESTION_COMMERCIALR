@@ -18,6 +18,15 @@
 
 <script>
 function closeModalAndReload() {
-    location.reload();
+    {% if redirect_url %}
+        const redirectUrl = "{{ redirect_url|escapejs }}";
+        if (redirectUrl.startsWith('javascript:')) {
+            eval(redirectUrl.substring(11));
+        } else {
+            window.location.href = redirectUrl;
+        }
+    {% else %}
+        location.reload();
+    {% endif %}
 }
 </script>

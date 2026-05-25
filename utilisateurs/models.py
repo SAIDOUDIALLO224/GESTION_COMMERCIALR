@@ -14,6 +14,10 @@ class ProfilUtilisateur(models.Model):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, verbose_name=_("Rôle"))
     telephone = models.CharField(max_length=20, blank=True, verbose_name=_("Téléphone"))
     actif = models.BooleanField(default=True, verbose_name=_("Actif"))
+    magasin = models.ForeignKey(
+        'core.Magasin', on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("Magasin")
+    )
 
     class Meta:
         verbose_name = _("Profil utilisateur")

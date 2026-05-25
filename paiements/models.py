@@ -140,13 +140,6 @@ class Paiement(models.Model):
     def surplus_effectif(self):
         if self.montant_surplus and self.montant_surplus > 0:
             return self.montant_surplus
-
-        # Fallback for legacy records: one payment greater than sale total.
-        if self.vente_id:
-            paiements_count = self.vente.paiements.count()
-            if paiements_count == 1 and self.montant > self.vente.montant_total:
-                return max(Decimal('0'), self.montant - self.vente.montant_total)
-
         return Decimal('0')
 
     def __str__(self):

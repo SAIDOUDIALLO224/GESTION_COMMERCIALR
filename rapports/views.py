@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
-from django.db.models import F, Sum, DecimalField, ExpressionWrapper, Count
+from django.db.models import F, Q, Sum, DecimalField, ExpressionWrapper, Count
 from django.db.models.functions import TruncDate
 from django.template.loader import render_to_string
 from ventes.models import Vente
@@ -9,6 +9,7 @@ from produits.models import Produit
 from stock.models import MouvementStock
 from weasyprint import HTML
 from utilisateurs.decorators import gerant_required
+from core.utils import get_magasins_visibles
 
 
 @login_required
@@ -27,7 +28,10 @@ def rapport_ventes(request):
     date_debut = None if date_debut in (None, '', 'None') else date_debut
     date_fin = None if date_fin in (None, '', 'None') else date_fin
 
-    ventes = Vente.objects.select_related('client').all().order_by('-date_vente')
+    magasins = get_magasins_visibles(request.user)
+    ventes = Vente.objects.select_related('client').filter(
+        Q(magasin__in=magasins)
+    ).order_by('-date_vente')
     if date_debut:
         ventes = ventes.filter(date_vente__date__gte=date_debut)
     if date_fin:
@@ -77,7 +81,10 @@ def rapport_stock(request):
     date_debut = None if date_debut in (None, '', 'None') else date_debut
     date_fin = None if date_fin in (None, '', 'None') else date_fin
 
-    produits = Produit.objects.select_related('categorie').annotate(
+    magasins = get_magasins_visibles(request.user)
+    produits = Produit.objects.select_related('categorie').filter(
+        Q(magasin__in=magasins)
+    ).annotate(
         valeur_stock=ExpressionWrapper(
             F('stock_actuel') * F('prix_achat'),
             output_field=DecimalField(max_digits=18, decimal_places=2)
@@ -87,7 +94,7 @@ def rapport_stock(request):
     total_stock_value = produits.aggregate(Sum('valeur_stock'))['valeur_stock__sum'] or 0
     produits_alerte = produits.filter(stock_actuel__lte=F('seuil_alerte'))
 
-    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur', 'fournisseur').order_by('-created_at')
+    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur', 'fournisseur').filter(Q(magasin__in=magasins)).order_by('-created_at')
     if date_debut:
         mouvements = mouvements.filter(created_at__date__gte=date_debut)
     if date_fin:
@@ -131,7 +138,10 @@ def export_pdf_ventes(request):
     date_debut = None if date_debut in (None, '', 'None') else date_debut
     date_fin = None if date_fin in (None, '', 'None') else date_fin
 
-    ventes = Vente.objects.select_related('client').all().order_by('-date_vente')
+    magasins = get_magasins_visibles(request.user)
+    ventes = Vente.objects.select_related('client').filter(
+        Q(magasin__in=magasins)
+    ).order_by('-date_vente')
     if date_debut:
         ventes = ventes.filter(date_vente__date__gte=date_debut)
     if date_fin:
@@ -145,7 +155,7 @@ def export_pdf_ventes(request):
         'total_paye': ventes.aggregate(Sum('montant_paye'))['montant_paye__sum'] or 0,
         'total_restant': ventes.aggregate(Sum('solde_restant'))['solde_restant__sum'] or 0,
     }
-    html_string = render_to_string('rapports/pdf_ventes.html', context)
+    html_string = render_to_string('rapports/pdf_ventes.html', context, request=request)
     pdf = HTML(string=html_string).write_pdf()
 
     response = HttpResponse(pdf, content_type='application/pdf')
@@ -168,13 +178,16 @@ def export_pdf_stock(request):
     date_debut = None if date_debut in (None, '', 'None') else date_debut
     date_fin = None if date_fin in (None, '', 'None') else date_fin
 
-    produits = Produit.objects.select_related('categorie').annotate(
+    magasins = get_magasins_visibles(request.user)
+    produits = Produit.objects.select_related('categorie').filter(
+        Q(magasin__in=magasins)
+    ).annotate(
         valeur_stock=ExpressionWrapper(
             F('stock_actuel') * F('prix_achat'),
             output_field=DecimalField(max_digits=18, decimal_places=2)
         )
     )
-    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur', 'fournisseur').order_by('-created_at')
+    mouvements = MouvementStock.objects.select_related('produit', 'utilisateur', 'fournisseur').filter(Q(magasin__in=magasins)).order_by('-created_at')
     if date_debut:
         mouvements = mouvements.filter(created_at__date__gte=date_debut)
     if date_fin:
@@ -183,7 +196,12 @@ def export_pdf_stock(request):
     produits_alerte = produits.filter(stock_actuel__lte=F('seuil_alerte'))
 
     # Calculer les quantités vendues par produit pour la période
-    lignes_vente = LigneVente.objects.filter(vente__date_vente__date__gte=date_debut, vente__date_vente__date__lte=date_fin)
+    lignes_vente = LigneVente.objects.filter(
+        vente__date_vente__date__gte=date_debut,
+        vente__date_vente__date__lte=date_fin,
+    ).filter(
+        Q(vente__magasin__in=magasins)
+    )
     quantites_vendues = lignes_vente.values('produit__id', 'produit__nom').annotate(
         quantite_vendue=Sum('quantite')
     ).order_by('produit__nom')
@@ -201,7 +219,7 @@ def export_pdf_stock(request):
         'date_fin': date_fin,
         'quantites_vendues': quantites_vendues_dict,
     }
-    html_string = render_to_string('rapports/pdf_stock.html', context)
+    html_string = render_to_string('rapports/pdf_stock.html', context, request=request)
     pdf = HTML(string=html_string).write_pdf()
 
     response = HttpResponse(pdf, content_type='application/pdf')
@@ -219,8 +237,11 @@ def paiements_journaliers(request):
     date_paiement = request.GET.get('date', date.today().strftime('%Y-%m-%d'))
     
     # Paiements du jour sélectionné
+    magasins = get_magasins_visibles(request.user)
     paiements_jour = Paiement.objects.filter(
-        date_paiement__date=date_paiement
+        date_paiement__date=date_paiement,
+    ).filter(
+        Q(vente__magasin__in=magasins)
     ).select_related('client', 'vente').order_by('client__nom')
     
     # Grouper par client et sommer les montants
@@ -241,7 +262,7 @@ def paiements_journaliers(request):
     
     # Si c'est une requête AJAX pour le PDF
     if request.GET.get('format') == 'pdf':
-        html_string = render_to_string('rapports/pdf_paiements_journaliers.html', context)
+        html_string = render_to_string('rapports/pdf_paiements_journaliers.html', context, request=request)
         pdf = HTML(string=html_string).write_pdf()
         
         response = HttpResponse(pdf, content_type='application/pdf')
@@ -260,8 +281,11 @@ def produits_vendus_journaliers(request):
     date_vente = request.GET.get('date', date.today().strftime('%Y-%m-%d'))
     
     # Produits vendus du jour sélectionné
+    magasins = get_magasins_visibles(request.user)
     lignes_vente_jour = LigneVente.objects.filter(
-        vente__date_vente__date=date_vente
+        vente__date_vente__date=date_vente,
+    ).filter(
+        Q(vente__magasin__in=magasins)
     ).select_related('produit', 'vente__client').order_by('produit__nom')
     
     # Grouper par produit et sommer les quantités
@@ -287,7 +311,7 @@ def produits_vendus_journaliers(request):
     
     # Si c'est une requête AJAX pour le PDF
     if request.GET.get('format') == 'pdf':
-        html_string = render_to_string('rapports/pdf_produits_vendus_journaliers.html', context)
+        html_string = render_to_string('rapports/pdf_produits_vendus_journaliers.html', context, request=request)
         pdf = HTML(string=html_string).write_pdf()
         
         response = HttpResponse(pdf, content_type='application/pdf')

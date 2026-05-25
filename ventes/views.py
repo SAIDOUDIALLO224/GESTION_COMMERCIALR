@@ -15,6 +15,7 @@ import uuid
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML
+from core.utils import get_magasins_visibles, get_current_magasin
 
 
 class VenteForm(forms.Form):
@@ -147,6 +148,7 @@ class ModifierPaiementForm(forms.Form):
 
 @login_required
 def nouvelle_vente(request):
+    magasins = get_magasins_visibles(request.user)
     if request.method == 'POST':
         form = VenteForm(request.POST)
         if form.is_valid():
@@ -156,7 +158,8 @@ def nouvelle_vente(request):
                     numero=f"VTE-{uuid.uuid4().hex[:8].upper()}",
                     client=form.cleaned_data.get('client'),
                     montant_total=0,
-                    utilisateur=request.user
+                    utilisateur=request.user,
+                    magasin=get_current_magasin(request.user),
                 )
                 
                 # Ajouter les lignes de vente
@@ -169,7 +172,11 @@ def nouvelle_vente(request):
                     if not produit_id or not quantite:
                         continue
                     
-                    produit = Produit.objects.get(pk=produit_id)
+                    produit = Produit.objects.filter(pk=produit_id).filter(
+                        Q(magasin__in=magasins)
+                    ).first()
+                    if not produit:
+                        continue
                     quantite = Decimal(quantite)
                     
                     # Vérifier le stock (on permet les stocks négatifs pour les ventes)
@@ -207,7 +214,8 @@ def nouvelle_vente(request):
                         type_mvt='SORTIE',
                         quantite=quantite,
                         motif=f'Vente {vente.numero}',
-                        utilisateur=request.user
+                        utilisateur=request.user,
+                        magasin=vente.magasin,
                     )
                     
                     montant_total += sous_total
@@ -223,38 +231,61 @@ def nouvelle_vente(request):
                 vente.montant_paye = montant_applique
                 vente.solde_restant = max(Decimal('0'), montant_total - montant_applique)
                 
-                print(f"Vente mise à jour: total={vente.montant_total}, payé={vente.montant_paye}, restant={vente.solde_restant}")
+                # Appliquer le credit_disponible du client automatiquement
+                credit_used = Decimal('0')
+                client = vente.client
+                if client and client.credit_disponible > 0 and vente.solde_restant > 0:
+                    credit_used = min(client.credit_disponible, vente.solde_restant)
+                    client.credit_disponible -= credit_used
+                    vente.montant_paye += credit_used
+                    vente.solde_restant = max(Decimal('0'), vente.solde_restant - credit_used)
                 
-                if montant_applique >= montant_total:
+                if vente.montant_paye >= montant_total:
                     vente.statut = 'SOLDE'
-                elif montant_applique > 0:
+                elif vente.montant_paye > 0:
                     vente.statut = 'PARTIEL'
                 else:
                     vente.statut = 'EN_ATTENTE'
                 
                 vente.save()
                 
-                # Créer le paiement uniquement si la vente est rattachée a un client.
-                if montant_paye_saisi > 0 and vente.client:
+                # Paiement pour la portion en espèce/chèque/virement
+                if montant_paye_saisi > 0 and client:
                     Paiement.objects.create(
                         vente=vente,
-                        client=vente.client,
+                        client=client,
                         montant=montant_paye_saisi,
                         montant_surplus=surplus,
                         mode_paiement=form.cleaned_data['mode_paiement'],
                         utilisateur=request.user
                     )
                 
-                # Mettre à jour le solde du client
-                if vente.client:
-                    vente.client.solde_du += vente.solde_restant
-                    vente.client.save()
+                # Paiement pour la portion couverte par le crédit disponible
+                if credit_used > 0 and client:
+                    Paiement.objects.create(
+                        vente=vente,
+                        client=client,
+                        montant=credit_used,
+                        montant_surplus=Decimal('0'),
+                        mode_paiement='CREDIT',
+                        notes='Crédit disponible appliqué automatiquement',
+                        utilisateur=request.user,
+                    )
                 
-                if surplus > 0 and vente.client:
-                    total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=vente.client))
+                # Mettre à jour le solde du client
+                if client:
+                    client.solde_du += vente.solde_restant
+                    client.save(update_fields=['solde_du', 'credit_disponible'])
+                
+                if surplus > 0 and client:
+                    total_solde_restant = sum(
+                        v.solde_restant for v in Vente.objects.filter(client=client).filter(
+                            Q(magasin__in=magasins)
+                        )
+                    )
                     if total_solde_restant == 0:
-                        vente.client.credit_disponible += surplus
-                        vente.client.save(update_fields=['credit_disponible'])
+                        client.credit_disponible += surplus
+                        client.save(update_fields=['credit_disponible'])
                         messages.success(
                             request,
                             f'Vente creee avec succes. Surplus de {surplus} GNF: l\'entreprise vous doit ce montant.'
@@ -267,7 +298,9 @@ def nouvelle_vente(request):
     else:
         form = VenteForm()
     
-    produits = Produit.objects.filter(actif=True).select_related('categorie').order_by('categorie__nom', 'nom')
+    produits = Produit.objects.filter(actif=True).filter(
+        Q(magasin__in=magasins)
+    ).select_related('categorie').order_by('categorie__nom', 'nom')
     context = {
         'form': form,
         'produits': produits,
@@ -277,7 +310,13 @@ def nouvelle_vente(request):
 
 @login_required
 def detail_vente(request, pk):
-    vente = get_object_or_404(Vente.objects.select_related('client', 'utilisateur'), pk=pk)
+    magasins = get_magasins_visibles(request.user)
+    vente = get_object_or_404(
+        Vente.objects.select_related('client', 'utilisateur').filter(
+            Q(magasin__in=magasins)
+        ),
+        pk=pk,
+    )
     lignes = vente.lignes.all()
     paiements = vente.paiements.all()
     
@@ -291,7 +330,13 @@ def detail_vente(request, pk):
 
 @login_required
 def encaisser_paiement(request, pk):
-    vente = get_object_or_404(Vente.objects.select_related('client'), pk=pk)
+    magasins = get_magasins_visibles(request.user)
+    vente = get_object_or_404(
+        Vente.objects.select_related('client').filter(
+            Q(magasin__in=magasins)
+        ),
+        pk=pk,
+    )
 
     if not vente.client:
         messages.error(request, 'Impossible d\'encaisser: cette vente est anonyme (sans client).')
@@ -348,7 +393,13 @@ def supprimer_vente(request, pk):
         messages.error(request, 'Methode non autorisee.')
         return redirect('ventes:liste')
 
-    vente = get_object_or_404(Vente.objects.select_related('client'), pk=pk)
+    magasins = get_magasins_visibles(request.user)
+    vente = get_object_or_404(
+        Vente.objects.select_related('client').filter(
+            Q(magasin__in=magasins)
+        ),
+        pk=pk,
+    )
 
     with transaction.atomic():
         for ligne in vente.lignes.select_related('produit'):
@@ -369,6 +420,7 @@ def supprimer_vente(request, pk):
 
 @login_required
 def encaisser_client(request):
+    magasins = get_magasins_visibles(request.user)
     if request.method == 'POST':
         form = EncaissementClientForm(request.POST)
         if form.is_valid():
@@ -377,7 +429,11 @@ def encaisser_client(request):
             mode_paiement = form.cleaned_data['mode_paiement']
             reference = form.cleaned_data.get('reference', '')
             
-            total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client))
+            total_solde_restant = sum(
+                v.solde_restant for v in Vente.objects.filter(client=client).filter(
+                    Q(magasin__in=magasins)
+                )
+            )
             
             if total_solde_restant <= 0:
                 messages.error(request, f'{client.nom} n\'a pas de dette en cours.')
@@ -393,7 +449,9 @@ def encaisser_client(request):
             with transaction.atomic():
                 ventes_impayees = Vente.objects.filter(
                     client=client,
-                    solde_restant__gt=0
+                    solde_restant__gt=0,
+                ).filter(
+                    Q(magasin__in=magasins)
                 ).order_by('date_vente')
                 
                 if not ventes_impayees.exists():
@@ -407,26 +465,17 @@ def encaisser_client(request):
                     
                     montant_vente = min(restant_a_distribuer, vente.solde_restant)
                     
+                    paiement = Paiement.objects.create(
+                        vente=vente,
+                        client=client,
+                        montant=montant_vente,
+                        montant_surplus=Decimal('0'),
+                        mode_paiement=mode_paiement,
+                        reference=reference,
+                        utilisateur=request.user,
+                    )
                     if paiement_principal is None:
-                        paiement_principal = Paiement.objects.create(
-                            vente=vente,
-                            client=client,
-                            montant=montant_vente,
-                            montant_surplus=Decimal('0') if restant_a_distribuer <= vente.solde_restant else (restant_a_distribuer - vente.solde_restant),
-                            mode_paiement=mode_paiement,
-                            reference=reference,
-                            utilisateur=request.user
-                        )
-                    else:
-                        Paiement.objects.create(
-                            vente=vente,
-                            client=client,
-                            montant=montant_vente,
-                            montant_surplus=Decimal('0'),
-                            mode_paiement=mode_paiement,
-                            reference=reference,
-                            utilisateur=request.user
-                        )
+                        paiement_principal = paiement
                     
                     vente.montant_paye = min(vente.montant_total, vente.montant_paye + montant_vente)
                     vente.solde_restant = max(Decimal('0'), vente.montant_total - vente.montant_paye)
@@ -435,7 +484,11 @@ def encaisser_client(request):
                     
                     restant_a_distribuer -= montant_vente
                 
-                nouveau_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client))
+                nouveau_solde_restant = sum(
+                    v.solde_restant for v in Vente.objects.filter(client=client).filter(
+                        Q(magasin__in=magasins)
+                    )
+                )
                 client.solde_du = nouveau_solde_restant
                 
                 if surplus > 0 and nouveau_solde_restant == 0:
@@ -462,7 +515,13 @@ def encaisser_client(request):
 
 @login_required
 def modifier_paiement(request, pk):
-    paiement = get_object_or_404(Paiement, pk=pk)
+    magasins = get_magasins_visibles(request.user)
+    paiement = get_object_or_404(
+        Paiement.objects.select_related('vente').filter(
+            Q(vente__magasin__in=magasins)
+        ),
+        pk=pk,
+    )
     
     if request.method == 'POST':
         form = ModifierPaiementForm(request.POST)
@@ -480,7 +539,6 @@ def modifier_paiement(request, pk):
                 paiement.montant = nouveau_montant
                 paiement.mode_paiement = form.cleaned_data['mode_paiement']
                 paiement.reference = form.cleaned_data.get('reference', '')
-                paiement.montant_surplus = Decimal('0')
                 paiement.save()
                 
                 if diff > 0:
@@ -494,7 +552,11 @@ def modifier_paiement(request, pk):
                     vente.statut = 'PARTIEL'
                     vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
                 
-                total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client))
+                total_solde_restant = sum(
+                    v.solde_restant for v in Vente.objects.filter(client=client).filter(
+                        Q(magasin__in=magasins)
+                    )
+                )
                 client.solde_du = total_solde_restant
                 client.save(update_fields=['solde_du'])
             
@@ -517,7 +579,13 @@ def modifier_paiement(request, pk):
 
 @login_required
 def supprimer_paiement(request, pk):
-    paiement = get_object_or_404(Paiement, pk=pk)
+    magasins = get_magasins_visibles(request.user)
+    paiement = get_object_or_404(
+        Paiement.objects.select_related('vente').filter(
+            Q(vente__magasin__in=magasins)
+        ),
+        pk=pk,
+    )
     client_pk = paiement.client.pk
     vente = paiement.vente
     
@@ -528,7 +596,11 @@ def supprimer_paiement(request, pk):
         vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
         
         client = paiement.client
-        total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client))
+        total_solde_restant = sum(
+            v.solde_restant for v in Vente.objects.filter(client=client).filter(
+                Q(magasin__in=magasins)
+            )
+        )
         client.solde_du = total_solde_restant
         client.save(update_fields=['solde_du'])
         
@@ -541,7 +613,10 @@ def supprimer_paiement(request, pk):
 @login_required
 def liste_ventes(request):
     search = request.GET.get('search', '')
-    ventes = Vente.objects.select_related('client').all().order_by('-date_vente')
+    magasins = get_magasins_visibles(request.user)
+    ventes = Vente.objects.select_related('client').filter(
+        Q(magasin__in=magasins)
+    ).order_by('-date_vente')
     
     if search:
         ventes = ventes.filter(Q(numero__icontains=search) | Q(client__nom__icontains=search))
@@ -550,9 +625,15 @@ def liste_ventes(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    total_ventes = Vente.objects.count()
-    total_montant = Vente.objects.aggregate(total=Sum('montant_total'))['total'] or 0
-    total_restant = Vente.objects.aggregate(total=Sum('solde_restant'))['total'] or 0
+    total_ventes = Vente.objects.filter(
+        Q(magasin__in=magasins)
+    ).count()
+    total_montant = Vente.objects.filter(
+        Q(magasin__in=magasins)
+    ).aggregate(total=Sum('montant_total'))['total'] or 0
+    total_restant = Vente.objects.filter(
+        Q(magasin__in=magasins)
+    ).aggregate(total=Sum('solde_restant'))['total'] or 0
     
     context = {
         'ventes': page_obj.object_list,

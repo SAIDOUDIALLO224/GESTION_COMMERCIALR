@@ -1,0 +1,274 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}{{ magasin.nom }} - GesStock Madina{% endblock %}
+{% block page_title %}{{ magasin.nom }}{% endblock %}
+
+{% block content %}
+<nav class="flex items-center gap-1.5 text-sm text-gray-500 mb-6">
+    <a href="{% url 'core:liste_magasins' %}" class="hover:text-blue-600">Magasins</a>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+    <span class="text-gray-900 font-medium">{{ magasin.nom }}</span>
+</nav>
+
+{% if user.is_superuser %}
+<div class="flex items-center gap-2 mb-6">
+    <a href="{% url 'core:modifier_magasin' magasin.pk %}" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M5.433 13.917l1.262-3.155A4 4 0 017.58 9.42l6.92-6.918a2.121 2.121 0 013 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 01-.65-.65z"/><path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0010 3H4.75A2.75 2.75 0 002 5.75v9.5A2.75 2.75 0 004.75 18h9.5A2.75 2.75 0 0017 15.25V10a.75.75 0 00-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5z"/></svg>
+        Modifier
+    </a>
+</div>
+{% endif %}
+
+<section class="relative overflow-hidden rounded-2xl border border-gray-700 bg-gradient-to-br from-gray-800 via-gray-900 to-black p-6 md:p-8 mb-6">
+    <div class="absolute -top-16 -right-16 w-52 h-52 bg-indigo-600/20 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-20 -left-20 w-60 h-60 bg-indigo-500/15 rounded-full blur-3xl"></div>
+    <div class="relative">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+            <div>
+                <div class="flex items-center gap-3">
+                    <p class="text-xs uppercase tracking-[0.18em] font-semibold text-gray-300">Magasin</p>
+                    {% if magasin.actif %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-900/60 text-green-300 border border-green-700/50">Actif</span>
+                    {% else %}
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-900/60 text-red-300 border border-red-700/50">Inactif</span>
+                    {% endif %}
+                </div>
+                <h2 class="mt-1 text-2xl md:text-3xl font-bold text-white">{{ magasin.nom }}</h2>
+                <p class="mt-2 text-sm text-gray-300">{{ magasin.adresse|default:"Adresse non renseignée" }}</p>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <a href="{% url 'produits:liste' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors">Produits</a>
+                <a href="{% url 'ventes:liste' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-gray-700 text-gray-200 border border-gray-600 hover:bg-gray-600 transition-colors">Ventes</a>
+                <a href="{% url 'stock:ajuster' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-gray-700 text-gray-200 border border-gray-600 hover:bg-gray-600 transition-colors">Stock</a>
+                <a href="{% url 'rapports:index' %}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-gray-700 text-gray-200 border border-gray-600 hover:bg-gray-600 transition-colors">Rapports</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Produits</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ total_produits|intcomma }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M8 16.25a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5a.75.75 0 01-.75-.75z"/><path fill-rule="evenodd" d="M4 4a3 3 0 013-3h6a3 3 0 013 3v12a3 3 0 01-3 3H7a3 3 0 01-3-3V4zm4-1.5v.75c0 .414.336.75.75.75h2.5a.75.75 0 00.75-.75V2.5h1A1.5 1.5 0 0114.5 4v12a1.5 1.5 0 01-1.5 1.5H7A1.5 1.5 0 015.5 16V4a1.5 1.5 0 011.5-1.5h1zm0 11.25a.75.75 0 01.75-.75h2.5a.75.75 0 010 1.5h-2.5a.75.75 0 01-.75-.75z" clip-rule="evenodd"/></svg>
+            </div>
+        </div>
+        {% if produits_rupture > 0 %}
+        <p class="mt-2 text-xs text-red-600 font-medium">{{ produits_rupture }} en rupture/alerte</p>
+        {% endif %}
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Ventes totales</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ total_ventes|intcomma }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M1 4a1 1 0 011-1h16a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V4zm12 4a3 3 0 11-6 0 3 3 0 016 0z" clip-rule="evenodd"/></svg>
+            </div>
+        </div>
+        <p class="mt-2 text-xs text-gray-500">{{ total_ventes_aujourdhui }} aujourd'hui</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Chiffre d'affaires</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ total_revenue|intcomma }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10.75 10.818v2.614A3.13 3.13 0 0011.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 00-1.138-.432M8.33 8.62c.053.054.074.114.074.163 0 .05-.02.11-.074.163a.5.5 0 01-.144.096l-.002.001a.868.868 0 00-.123.062l-.002.001a.497.497 0 01-.195.097.5.5 0 01-.49-.134l-.001-.001a.528.528 0 01-.143-.366c0-.154.06-.277.143-.366a.5.5 0 01.49-.134.497.497 0 01.195.097.868.868 0 00.125.062l.002.001.123.062a.5.5 0 01.144.096zM10 2.5c-1.108 0-2.166.16-3.17.456A8.496 8.496 0 004.07 7.695c-.324.975-.52 2.017-.57 3.08a8.384 8.384 0 001.056 3.355A6.816 6.816 0 003.62 16.06a.75.75 0 00.777 1.185 6.617 6.617 0 002.44-.843 8.494 8.494 0 006.326 0 6.617 6.617 0 002.44.843.75.75 0 00.777-1.185 6.815 6.815 0 00-1.934-1.93 8.383 8.383 0 001.056-3.355c-.05-1.063-.246-2.105-.57-3.08a8.496 8.496 0 00-2.76-4.739A8.479 8.479 0 0010 2.5z"/></svg>
+            </div>
+        </div>
+        <p class="mt-2 text-xs text-gray-500">{{ total_solde_restant|intcomma }} GNF restant dû</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Utilisateurs</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ magasin.nb_utilisateurs }}</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zM6 8a2 2 0 11-4 0 2 2 0 014 0zM1.49 15.326a.78.78 0 01-.358-.442 3 3 0 014.308-3.516 6.484 6.484 0 00-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 01-2.07-.655zM16.44 15.98a4.97 4.97 0 002.07-.654.78.78 0 00.357-.442 3 3 0 00-4.308-3.517 6.484 6.484 0 011.907 3.96 2.32 2.32 0 01-.026.654zM18 8a2 2 0 11-4 0 2 2 0 014 0zM5.304 16.19a.844.844 0 01-.277-.71 5 5 0 019.947 0 .843.843 0 01-.277.71A6.975 6.975 0 0110 18a6.974 6.974 0 01-4.696-1.81z"/></svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Dernières ventes</h3>
+        </div>
+        <div class="p-6">
+            {% if dernieres_ventes %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs font-semibold text-gray-500 uppercase">
+                            <th class="pb-3 pr-4">N°</th>
+                            <th class="pb-3 pr-4">Client</th>
+                            <th class="pb-3 pr-4">Date</th>
+                            <th class="pb-3 text-right">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for v in dernieres_ventes %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-3 pr-4">
+                                <a href="{% url 'ventes:detail' v.pk %}" class="text-blue-600 hover:text-blue-800 font-medium">{{ v.numero }}</a>
+                            </td>
+                            <td class="py-3 pr-4 text-gray-600">{{ v.client.nom|default:"Anonyme" }}</td>
+                            <td class="py-3 pr-4 text-gray-600">{{ v.date_vente|date:"d/m/Y" }}</td>
+                            <td class="py-3 text-right font-medium">{{ v.montant_total|intcomma }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 text-center py-8">Aucune vente dans ce magasin.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Produits en alerte de stock</h3>
+        </div>
+        <div class="p-6">
+            {% if produits_en_alerte %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs font-semibold text-gray-500 uppercase">
+                            <th class="pb-3 pr-4">Produit</th>
+                            <th class="pb-3 pr-4">Catégorie</th>
+                            <th class="pb-3 text-right">Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for p in produits_en_alerte %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-3 pr-4">
+                                <span class="font-medium text-gray-900">{{ p.nom }}</span>
+                                <span class="text-gray-400 ml-1">{{ p.code }}</span>
+                            </td>
+                            <td class="py-3 pr-4 text-gray-600">{{ p.categorie.nom }}</td>
+                            <td class="py-3 text-right">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {% if p.stock_actuel <= 0 %}bg-red-100 text-red-800{% else %}bg-amber-100 text-amber-800{% endif %}">
+                                    {{ p.stock_actuel|floatformat:"-3" }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 text-center py-8">Tous les produits ont un stock suffisant.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Magasins visibles</h3>
+        </div>
+        <div class="p-6">
+            {% if magasin.magasins_visibles.all %}
+            <div class="flex flex-wrap gap-2">
+                {% for visible in magasin.magasins_visibles.all %}
+                <a href="{% url 'core:detail_magasin' visible.pk %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 text-sm font-medium hover:bg-indigo-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M10.75 10.818v2.614A3.13 3.13 0 0011.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 00-1.138-.432M8.33 8.62c.053.054.074.114.074.163 0 .05-.02.11-.074.163a.5.5 0 01-.144.096l-.002.001a.868.868 0 00-.123.062l-.002.001a.497.497 0 01-.195.097.5.5 0 01-.49-.134l-.001-.001a.528.528 0 01-.143-.366c0-.154.06-.277.143-.366a.5.5 0 01.49-.134.497.497 0 01.195.097.868.868 0 00.125.062l.002.001.123.062a.5.5 0 01.144.096zM10 2.5c-1.108 0-2.166.16-3.17.456A8.496 8.496 0 004.07 7.695c-.324.975-.52 2.017-.57 3.08a8.384 8.384 0 001.056 3.355A6.816 6.816 0 003.62 16.06a.75.75 0 00.777 1.185 6.617 6.617 0 002.44-.843 8.494 8.494 0 006.326 0 6.617 6.617 0 002.44.843.75.75 0 00.777-1.185 6.815 6.815 0 00-1.934-1.93 8.383 8.383 0 001.056-3.355c-.05-1.063-.246-2.105-.57-3.08a8.496 8.496 0 00-2.76-4.739A8.479 8.479 0 0010 2.5z"/></svg>
+                    {{ visible.nom }}
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 text-center py-4">Aucun magasin visible.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div class="px-6 py-4 border-b border-gray-100">
+            <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Utilisateurs rattachés</h3>
+        </div>
+        <div class="p-6">
+            {% if utilisateurs %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs font-semibold text-gray-500 uppercase">
+                            <th class="pb-3 pr-4">Nom</th>
+                            <th class="pb-3 pr-4">Rôle</th>
+                            <th class="pb-3">Contact</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for profil in utilisateurs %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-3 pr-4 font-medium text-gray-900">{{ profil.user.get_full_name|default:profil.user.username }}</td>
+                            <td class="py-3 pr-4">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {% if profil.role == 'GERANT' %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ profil.get_role_display }}
+                                </span>
+                            </td>
+                            <td class="py-3 text-gray-600">{{ profil.telephone|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 text-center py-4">Aucun utilisateur rattaché.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if mouvements %}
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm mt-6">
+    <div class="px-6 py-4 border-b border-gray-100">
+        <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Derniers mouvements de stock</h3>
+    </div>
+    <div class="p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs font-semibold text-gray-500 uppercase">
+                        <th class="pb-3 pr-4">Date</th>
+                        <th class="pb-3 pr-4">Produit</th>
+                        <th class="pb-3 pr-4">Type</th>
+                        <th class="pb-3 text-right">Quantité</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for mvt in mouvements %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-3 pr-4 text-gray-600">{{ mvt.created_at|date:"d/m/Y H:i" }}</td>
+                        <td class="py-3 pr-4 font-medium text-gray-900">{{ mvt.produit.nom }}</td>
+                        <td class="py-3 pr-4">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {% if mvt.type_mvt == 'ENTREE' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ mvt.get_type_mvt_display }}
+                            </span>
+                        </td>
+                        <td class="py-3 text-right font-medium">{{ mvt.quantite|floatformat:"-3" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

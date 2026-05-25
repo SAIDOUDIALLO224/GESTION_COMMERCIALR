@@ -36,6 +36,10 @@ class Vente(models.Model):
         max_length=20, choices=STATUT_CHOICES, default='EN_ATTENTE',
         verbose_name=_("Statut")
     )
+    magasin = models.ForeignKey(
+        'core.Magasin', on_delete=models.PROTECT, null=True, blank=True,
+        verbose_name=_("Magasin")
+    )
     notes = models.TextField(blank=True, verbose_name=_("Notes"))
     utilisateur = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True,

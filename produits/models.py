@@ -43,6 +43,10 @@ class Produit(models.Model):
         verbose_name=_("Seuil d'alerte")
     )
     
+    magasin = models.ForeignKey(
+        'core.Magasin', on_delete=models.PROTECT, null=True, blank=True,
+        verbose_name=_("Magasin")
+    )
     photo = models.ImageField(upload_to='produits/', blank=True, null=True, verbose_name=_("Photo"))
     actif = models.BooleanField(default=True, verbose_name=_("Actif"))
     

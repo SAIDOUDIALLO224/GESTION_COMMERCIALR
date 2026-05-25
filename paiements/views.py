@@ -4,49 +4,60 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from django.db import models
+from django.db.models import Q
 from decimal import Decimal
 from .models import Paiement, CompteEcoBanqueClient
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .forms import CompteEcoBanqueClientForm
 from core.models import Configuration
+from core.utils import get_magasins_visibles
 
 
 @login_required
 def imprimer_recu(request, pk):
-	paiement = get_object_or_404(
-		Paiement.objects.select_related('vente', 'client', 'utilisateur'),
-		pk=pk,
-	)
+    magasins = get_magasins_visibles(request.user)
+    paiement = get_object_or_404(
+        Paiement.objects.select_related('vente', 'client', 'utilisateur').filter(
+            Q(vente__magasin__in=magasins)
+        ),
+        pk=pk,
+    )
 
-	context = {
-		'paiement': paiement,
-	}
-	html_string = render_to_string('paiements/recu_pdf.html', context)
-	pdf = HTML(string=html_string).write_pdf()
+    magasin_nom = paiement.vente.magasin.nom if paiement.vente.magasin else 'Magasin Madina'
+    adresse = paiement.vente.magasin.adresse if paiement.vente.magasin and paiement.vente.magasin.adresse else 'Marché de Madina, Conakry, Guinée'
 
-	response = HttpResponse(pdf, content_type='application/pdf')
-	response['Content-Disposition'] = f'inline; filename="recu_paiement_{paiement.id}.pdf"'
-	return response
+    context = {
+        'paiement': paiement,
+        'magasin': magasin_nom,
+        'adresse': adresse,
+    }
+    html_string = render_to_string('paiements/recu_pdf.html', context, request=request)
+    pdf = HTML(string=html_string).write_pdf()
 
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="recu_paiement_{paiement.id}.pdf"'
+    return response
+
+
+def _get_config():
+    config, created = Configuration.objects.get_or_create(
+        pk=1, defaults={'nom_magasin': 'Magasin Madina'}
+    )
+    return config
 
 def get_solde_compte_bancaire():
-    config = Configuration.objects.first()
-    if config:
-        return config.solde_compte_bancaire
-    return Decimal('0')
+    return _get_config().solde_compte_bancaire
 
 def set_solde_compte_bancaire(montant):
-    config = Configuration.objects.first()
-    if config:
-        config.solde_compte_bancaire = montant
-        config.save(update_fields=['solde_compte_bancaire'])
+    config = _get_config()
+    config.solde_compte_bancaire = montant
+    config.save(update_fields=['solde_compte_bancaire'])
 
 def ajouter_solde_compte_bancaire(montant):
-    config = Configuration.objects.first()
-    if config:
-        config.solde_compte_bancaire += montant
-        config.save(update_fields=['solde_compte_bancaire'])
+    config = _get_config()
+    config.solde_compte_bancaire += montant
+    config.save(update_fields=['solde_compte_bancaire'])
 
 
 @login_required
