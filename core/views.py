@@ -259,25 +259,20 @@ def supprimer_magasin(request, pk):
     if not _superadmin_required(request):
         return redirect('core:dashboard')
     magasin = get_object_or_404(Magasin, pk=pk)
+    if magasin.est_principal:
+        messages.error(request, 'Impossible de supprimer le magasin principal.')
+        return redirect('core:detail_magasin', pk=magasin.pk)
     if request.method == 'POST':
         nom = magasin.nom
-        try:
-            with transaction.atomic():
-                magasin.delete()
-        except ProtectedError as e:
-            objets = e.protected_objects
-            details = []
-            for obj in objets:
-                nom_modele = obj._meta.verbose_name
-                details.append(f"{obj} ({nom_modele})")
-            messages.error(
-                request,
-                f'Impossible de supprimer "{nom}". '
-                f'Les éléments suivants y sont rattachés : {", ".join(details)}. '
-                f'Supprimez ou déplacez ces éléments d\'abord.'
-            )
-            return redirect('core:detail_magasin', pk=magasin.pk)
-        messages.success(request, f'Magasin "{nom}" supprimé.')
+        with transaction.atomic():
+            MouvementStock.objects.filter(magasin=magasin).delete()
+            Vente.objects.filter(magasin=magasin).delete()
+            Produit.objects.filter(magasin=magasin).delete()
+            Categorie.objects.filter(magasin=magasin).delete()
+            Client.objects.filter(magasin=magasin).delete()
+            ProfilUtilisateur.objects.filter(magasin=magasin).delete()
+            magasin.delete()
+        messages.success(request, f'Magasin "{nom}" et toutes ses données supprimés.')
     return redirect('core:liste_magasins')
 
 
