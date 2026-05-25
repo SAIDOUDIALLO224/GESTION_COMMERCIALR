@@ -133,9 +133,13 @@ def _superadmin_required(request):
 def migrer_donnees(request):
     if not _superadmin_required(request):
         return redirect('core:dashboard')
-    magasin = get_current_magasin(request.user)
+    magasin_id = request.GET.get('magasin_id')
+    if magasin_id:
+        magasin = get_object_or_404(Magasin, pk=magasin_id)
+    else:
+        magasin = get_current_magasin(request.user)
     if not magasin:
-        messages.error(request, 'Vous devez avoir un magasin assigné pour migrer les données.')
+        messages.error(request, 'Aucun magasin cible. Créez d\'abord un magasin.')
         return redirect('core:liste_magasins')
     count_produits = Produit.objects.filter(magasin__isnull=True).update(magasin=magasin)
     count_ventes = Vente.objects.filter(magasin__isnull=True).update(magasin=magasin)
@@ -156,13 +160,13 @@ def changer_magasin(request):
         magasin_id = request.POST.get('magasin_id')
         magasins = get_magasins_visibles(request.user)
         magasin = get_object_or_404(magasins, pk=magasin_id)
-        try:
-            profil = request.user.profilutilisateur
-            profil.magasin = magasin
-            profil.save()
-            messages.success(request, f'Vous travaillez maintenant dans "{magasin.nom}".')
-        except Exception:
-            messages.error(request, 'Vous n\'avez pas de profil utilisateur.')
+        profil, created = ProfilUtilisateur.objects.get_or_create(
+            user=request.user,
+            defaults={'role': 'GERANT', 'magasin': magasin}
+        )
+        profil.magasin = magasin
+        profil.save()
+        messages.success(request, f'Vous travaillez maintenant dans "{magasin.nom}".')
     return redirect(request.META.get('HTTP_REFERER', 'core:dashboard'))
 
 
@@ -209,13 +213,13 @@ def creer_magasin(request):
                     )
                     count += 1
                 messages.success(request, f'Catalogue copié ({count} produits depuis "{source.nom}").')
-            try:
-                profil = request.user.profilutilisateur
-                if not profil.magasin:
-                    profil.magasin = magasin
-                    profil.save()
-            except Exception:
-                pass
+            profil, created = ProfilUtilisateur.objects.get_or_create(
+                user=request.user,
+                defaults={'role': 'GERANT', 'magasin': magasin}
+            )
+            if not profil.magasin:
+                profil.magasin = magasin
+                profil.save()
             # Rattachement automatique des données orphelines si c'est le magasin principal
             if magasin.est_principal:
                 count_produits = Produit.objects.filter(magasin__isnull=True).update(magasin=magasin)

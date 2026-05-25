@@ -7,11 +7,16 @@
     <div class="flex items-center gap-4">
         <p class="text-gray-600">Gérez les magasins/dépôts et leurs visibilités</p>
         {% if user.is_superuser and total_orphelins > 0 %}
-        <a href="{% url 'core:migrer_donnees' %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 text-xs font-medium rounded-lg hover:bg-amber-200 transition-colors"
-           onclick="return confirm('Migrer {{ total_orphelins }} élémént(s) vers votre magasin actuel ?')">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M10.362 1.093a.75.75 0 00-.724 0L2.523 5.018 10 9.143l7.477-4.125-7.115-3.925zM18 6.443l-7.25 4v8.25l6.862-3.786A.75.75 0 0018 14.25V6.443zm-8.75 12.25v-8.25l-7.25-4v7.807a.75.75 0 00.388.657l6.862 3.786z"/></svg>
-            Migrer {{ total_orphelins }} élément(s) orphelin(s)
-        </a>
+        <div class="flex items-center gap-2">
+            {% for m in magasins %}
+            <a href="{% url 'core:migrer_donnees' %}?magasin_id={{ m.pk }}"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-800 text-xs font-medium rounded-lg hover:bg-amber-200 transition-colors"
+               onclick="return confirm('Migrer {{ total_orphelins }} élément(s) orphelin(s) vers \"{{ m.nom }}\" ?')">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4"><path d="M10.362 1.093a.75.75 0 00-.724 0L2.523 5.018 10 9.143l7.477-4.125-7.115-3.925zM18 6.443l-7.25 4v8.25l6.862-3.786A.75.75 0 0018 14.25V6.443zm-8.75 12.25v-8.25l-7.25-4v7.807a.75.75 0 00.388.657l6.862 3.786z"/></svg>
+                Migrer vers {{ m.nom }}
+            </a>
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
     {% if user.is_superuser %}
