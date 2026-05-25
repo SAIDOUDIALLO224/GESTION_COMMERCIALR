@@ -269,7 +269,8 @@ def supprimer_magasin(request, pk):
 
 @login_required
 def detail_magasin(request, pk):
-    magasin = get_object_or_404(Magasin.objects.annotate(
+    magasins_visibles = get_magasins_visibles(request.user)
+    magasin = get_object_or_404(magasins_visibles.annotate(
         nb_utilisateurs=Count('profilutilisateur'),
     ), pk=pk)
 

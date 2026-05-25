@@ -5,8 +5,12 @@ from django.utils.translation import gettext_lazy as _
 
 class Categorie(models.Model):
     """Catégories de produits"""
-    nom = models.CharField(max_length=100, unique=True, verbose_name=_("Nom"))
+    nom = models.CharField(max_length=100, verbose_name=_("Nom"))
     description = models.TextField(blank=True, verbose_name=_("Description"))
+    magasin = models.ForeignKey(
+        'core.Magasin', on_delete=models.CASCADE, null=True, blank=True,
+        verbose_name=_("Magasin")
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Créé le"))
 
     class Meta:

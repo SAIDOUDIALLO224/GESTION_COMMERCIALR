@@ -22,6 +22,7 @@ from core.utils import get_magasins_visibles, get_current_magasin
 
 class ProduitForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
+        magasin = kwargs.pop('magasin', None)
         super().__init__(*args, **kwargs)
         if not self.instance or not self.instance.pk:
             self.fields['code'].required = False
@@ -32,6 +33,10 @@ class ProduitForm(forms.ModelForm):
             self.ancien_prix_vente_gros = self.instance.prix_vente_gros
             self.ancien_stock_actuel = self.instance.stock_actuel
             self.ancien_seuil_alerte = self.instance.seuil_alerte
+        if magasin:
+            self.fields['categorie'].queryset = Categorie.objects.filter(
+                Q(magasin=magasin) | Q(magasin__isnull=True)
+            )
 
     class Meta:
         model = Produit
@@ -91,7 +96,8 @@ def liste_produits(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    categories = Categorie.objects.annotate(nb_produits=Count('produit')).order_by('nom')
+    current = get_current_magasin(request.user)
+    categories = Categorie.objects.filter(Q(magasin=current) | Q(magasin__isnull=True)).annotate(nb_produits=Count('produit')).order_by('nom')
     context = {
         'page_obj': page_obj,
         'produits': page_obj.object_list,
@@ -173,11 +179,12 @@ def detail_produit(request, pk):
 @login_required
 @gerant_required
 def creer_produit(request):
+    magasin = get_current_magasin(request.user)
     if request.method == 'POST':
-        form = ProduitForm(request.POST, request.FILES)
+        form = ProduitForm(request.POST, request.FILES, magasin=magasin)
         if form.is_valid():
             produit = form.save(commit=False)
-            produit.magasin = get_current_magasin(request.user)
+            produit.magasin = magasin
             produit.save()
             if request.headers.get('HX-Request'):
                 messages.success(request, 'Produit créé avec succès!')
@@ -186,12 +193,12 @@ def creer_produit(request):
                 messages.success(request, 'Produit créé avec succès!')
                 return redirect('produits:liste')
     else:
-        form = ProduitForm()
+        form = ProduitForm(magasin=magasin)
 
     context = {
         'form': form,
         'title': 'Créer un produit',
-        'has_categories': Categorie.objects.exists(),
+        'has_categories': Categorie.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)).exists(),
     }
     
     if request.headers.get('HX-Request'):
@@ -204,21 +211,22 @@ def creer_produit(request):
 @gerant_required
 def modifier_produit(request, pk):
     magasins = get_magasins_visibles(request.user)
+    magasin = get_current_magasin(request.user)
     produit = get_object_or_404(_produits_visibles(magasins), pk=pk)
     if request.method == 'POST':
-        form = ProduitForm(request.POST, request.FILES, instance=produit)
+        form = ProduitForm(request.POST, request.FILES, instance=produit, magasin=magasin)
         if form.is_valid():
             form.save()
             messages.success(request, 'Produit modifié avec succès!')
             return redirect('produits:detail', pk=produit.pk)
     else:
-        form = ProduitForm(instance=produit)
+        form = ProduitForm(instance=produit, magasin=magasin)
 
     context = {
         'form': form,
         'produit': produit,
         'title': 'Modifier le produit',
-        'has_categories': Categorie.objects.exists(),
+        'has_categories': Categorie.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)).exists(),
     }
     return render(request, 'produits/form.html', context)
 
@@ -241,7 +249,8 @@ def supprimer_produit(request, pk):
 
 def _categories_list_response(request):
     """Helper: returns the categories partial with fresh data."""
-    categories = Categorie.objects.annotate(nb_produits=Count('produit')).order_by('nom')
+    current = get_current_magasin(request.user)
+    categories = Categorie.objects.filter(Q(magasin=current) | Q(magasin__isnull=True)).annotate(nb_produits=Count('produit')).order_by('nom')
     return render(request, 'produits/partials/categories.html', {'categories': categories})
 
 
@@ -251,7 +260,9 @@ def creer_categorie(request):
     if request.method == 'POST':
         form = CategorieForm(request.POST)
         if form.is_valid():
-            form.save()
+            categorie = form.save(commit=False)
+            categorie.magasin = get_current_magasin(request.user)
+            categorie.save()
             return _categories_list_response(request)
         return render(request, 'produits/partials/categorie_form.html',
                       {'form': form, 'action_url': request.path})
@@ -263,7 +274,8 @@ def creer_categorie(request):
 @login_required
 @gerant_required
 def modifier_categorie(request, pk):
-    categorie = get_object_or_404(Categorie, pk=pk)
+    current = get_current_magasin(request.user)
+    categorie = get_object_or_404(Categorie.objects.filter(Q(magasin=current) | Q(magasin__isnull=True)), pk=pk)
     if request.method == 'POST':
         form = CategorieForm(request.POST, instance=categorie)
         if form.is_valid():
@@ -279,12 +291,13 @@ def modifier_categorie(request, pk):
 @login_required
 @gerant_required
 def supprimer_categorie(request, pk):
-    categorie = get_object_or_404(Categorie, pk=pk)
+    current = get_current_magasin(request.user)
+    categorie = get_object_or_404(Categorie.objects.filter(Q(magasin=current) | Q(magasin__isnull=True)), pk=pk)
     if request.method == 'POST':
         try:
             categorie.delete()
         except Exception:
-            categories = Categorie.objects.annotate(nb_produits=Count('produit')).order_by('nom')
+            categories = Categorie.objects.filter(Q(magasin=current) | Q(magasin__isnull=True)).annotate(nb_produits=Count('produit')).order_by('nom')
             return render(request, 'produits/partials/categories.html', {
                 'categories': categories,
                 'delete_error': f'Impossible de supprimer «{categorie.nom}» : des produits y sont rattachés.',
