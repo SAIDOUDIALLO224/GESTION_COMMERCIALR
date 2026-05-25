@@ -31,6 +31,12 @@ class ClientForm(forms.ModelForm):
 
 
 class DetteInitialeForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        magasin = kwargs.pop('magasin', None)
+        super().__init__(*args, **kwargs)
+        if magasin:
+            self.fields['client'].queryset = Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True))
+
     client = forms.ModelChoiceField(
         queryset=Client.objects.all(),
         required=True,
@@ -97,6 +103,12 @@ class RemboursementSurplusForm(forms.Form):
 
 
 class CreditInitialForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        magasin = kwargs.pop('magasin', None)
+        super().__init__(*args, **kwargs)
+        if magasin:
+            self.fields['client'].queryset = Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True))
+
     client = forms.ModelChoiceField(
         queryset=Client.objects.all(),
         required=True,
@@ -129,7 +141,8 @@ class CreditInitialForm(forms.Form):
 @login_required
 def liste_clients(request):
     search = request.GET.get('search', '')
-    clients = Client.objects.all()
+    magasin = get_current_magasin(request.user)
+    clients = Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True))
     
     if search:
         clients = clients.filter(Q(nom__icontains=search) | Q(telephone__icontains=search))
@@ -139,13 +152,13 @@ def liste_clients(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    total_clients = Client.objects.count()
-    clients_actifs = Client.objects.filter(actif=True).count()
-    total_solde_solde = Vente.objects.filter(client__isnull=False, statut='SOLDE').aggregate(
+    total_clients = clients.count()
+    clients_actifs = clients.filter(actif=True).count()
+    total_solde_solde = Vente.objects.filter(client__in=clients, statut='SOLDE').aggregate(
         total=Sum('montant_total')
     )['total'] or 0
-    total_solde_du = Client.objects.aggregate(total=Sum('solde_du'))['total'] or 0
-    total_credit = Client.objects.aggregate(total=Sum('credit_disponible'))['total'] or 0
+    total_solde_du = clients.aggregate(total=Sum('solde_du'))['total'] or 0
+    total_credit = clients.aggregate(total=Sum('credit_disponible'))['total'] or 0
     
     context = {
         'clients': page_obj.object_list,
@@ -162,7 +175,8 @@ def liste_clients(request):
 
 @login_required
 def detail_client(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    magasin = get_current_magasin(request.user)
+    client = get_object_or_404(Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)), pk=pk)
     magasins = get_magasins_visibles(request.user)
     ventes = Vente.objects.filter(client=client).filter(
         Q(magasin__in=magasins)
@@ -200,7 +214,9 @@ def creer_client(request):
     if request.method == 'POST':
         form = ClientForm(request.POST)
         if form.is_valid():
-            form.save()
+            client = form.save(commit=False)
+            client.magasin = get_current_magasin(request.user)
+            client.save()
             if request.headers.get('HX-Request'):
                 messages.success(request, 'Client créé avec succès!')
                 return render(request, 'partials/modal_success.html', {'redirect_url': 'javascript:location.reload()'})
@@ -220,7 +236,8 @@ def creer_client(request):
 
 @login_required
 def modifier_client(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    magasin = get_current_magasin(request.user)
+    client = get_object_or_404(Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)), pk=pk)
     if request.method == 'POST':
         form = ClientForm(request.POST, instance=client)
         if form.is_valid():
@@ -236,7 +253,8 @@ def modifier_client(request, pk):
 
 @login_required
 def supprimer_client(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    magasin = get_current_magasin(request.user)
+    client = get_object_or_404(Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)), pk=pk)
     if request.method == 'POST':
         nom = client.nom
         client.delete()
@@ -250,11 +268,13 @@ def imprimer_clients_debiteurs(request):
     from django.template.loader import render_to_string
     from weasyprint import HTML
     
+    magasin = get_current_magasin(request.user)
     magasins = get_magasins_visibles(request.user)
-    clients_debiteurs = Client.objects.filter(solde_du__gt=0).filter(
+    clients_du_magasin = Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True))
+    clients_debiteurs = clients_du_magasin.filter(solde_du__gt=0).filter(
         Q(vente__magasin__in=magasins)
     ).distinct().order_by('nom')
-    clients_entreprise_doit = Client.objects.filter(
+    clients_entreprise_doit = clients_du_magasin.filter(
         credit_disponible__gt=F('solde_du')
     ).filter(
         Q(vente__magasin__in=magasins)
@@ -290,8 +310,9 @@ def imprimer_clients_debiteurs(request):
 
 @login_required
 def dette_initiale(request):
+    magasin = get_current_magasin(request.user)
     if request.method == 'POST':
-        form = DetteInitialeForm(request.POST)
+        form = DetteInitialeForm(request.POST, magasin=magasin)
         if form.is_valid():
             client = form.cleaned_data['client']
             montant = form.cleaned_data['montant']
@@ -345,7 +366,7 @@ def dette_initiale(request):
             messages.success(request, f'Dette initiale de {montant:,.0f} GNF enregistrée pour {client.nom}.')
             return redirect('clients:detail', pk=client.pk)
     else:
-        form = DetteInitialeForm()
+        form = DetteInitialeForm(magasin=magasin)
     
     context = {'form': form, 'title': 'Enregistrer une dette initiale'}
     return render(request, 'clients/dette_initiale.html', context)
@@ -353,7 +374,8 @@ def dette_initiale(request):
 
 @login_required
 def remboursement_surplus(request, pk):
-    client = get_object_or_404(Client, pk=pk)
+    magasin = get_current_magasin(request.user)
+    client = get_object_or_404(Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True)), pk=pk)
     
     if client.credit_disponible <= 0:
         messages.error(request, 'Ce client n\'a pas de crédit disponible à rembourser.')
@@ -400,8 +422,9 @@ def remboursement_surplus(request, pk):
 
 @login_required
 def credit_disponible_initial(request):
+    magasin = get_current_magasin(request.user)
     if request.method == 'POST':
-        form = CreditInitialForm(request.POST)
+        form = CreditInitialForm(request.POST, magasin=magasin)
         if form.is_valid():
             client = form.cleaned_data['client']
             montant = form.cleaned_data['montant']
@@ -417,7 +440,7 @@ def credit_disponible_initial(request):
             messages.success(request, f'Crédit disponible de {montant:,.0f} GNF enregistré pour {client.nom}.')
             return redirect('clients:detail', pk=client.pk)
     else:
-        form = CreditInitialForm()
+        form = CreditInitialForm(magasin=magasin)
     
     context = {'form': form, 'title': 'Enregistrer un crédit disponible initial'}
     return render(request, 'clients/credit_initial.html', context)

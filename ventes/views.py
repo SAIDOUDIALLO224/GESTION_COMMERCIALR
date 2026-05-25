@@ -19,6 +19,12 @@ from core.utils import get_magasins_visibles, get_current_magasin
 
 
 class VenteForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        magasin = kwargs.pop('magasin', None)
+        super().__init__(*args, **kwargs)
+        if magasin:
+            self.fields['client'].queryset = Client.objects.filter(Q(magasin=magasin) | Q(magasin__isnull=True))
+
     client = forms.ModelChoiceField(
         queryset=Client.objects.all(),
         required=False,
@@ -86,6 +92,13 @@ class EncaissementForm(forms.Form):
 
 
 class EncaissementClientForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        magasin = kwargs.pop('magasin', None)
+        super().__init__(*args, **kwargs)
+        if magasin:
+            self.fields['client'].queryset = Client.objects.filter(actif=True).filter(
+                Q(magasin=magasin) | Q(magasin__isnull=True))
+
     client = forms.ModelChoiceField(
         queryset=Client.objects.filter(actif=True),
         widget=forms.Select(attrs={
@@ -149,8 +162,9 @@ class ModifierPaiementForm(forms.Form):
 @login_required
 def nouvelle_vente(request):
     magasins = get_magasins_visibles(request.user)
+    magasin = get_current_magasin(request.user)
     if request.method == 'POST':
-        form = VenteForm(request.POST)
+        form = VenteForm(request.POST, magasin=magasin)
         if form.is_valid():
             with transaction.atomic():
                 # Créer la vente
@@ -296,7 +310,7 @@ def nouvelle_vente(request):
                     messages.success(request, 'Vente creee avec succes.')
                 return redirect('ventes:detail', pk=vente.pk)
     else:
-        form = VenteForm()
+        form = VenteForm(magasin=magasin)
     
     produits = Produit.objects.filter(actif=True).filter(
         Q(magasin__in=magasins)
@@ -421,8 +435,9 @@ def supprimer_vente(request, pk):
 @login_required
 def encaisser_client(request):
     magasins = get_magasins_visibles(request.user)
+    magasin = get_current_magasin(request.user)
     if request.method == 'POST':
-        form = EncaissementClientForm(request.POST)
+        form = EncaissementClientForm(request.POST, magasin=magasin)
         if form.is_valid():
             client = form.cleaned_data['client']
             montant = form.cleaned_data['montant']
@@ -504,7 +519,7 @@ def encaisser_client(request):
             
             return redirect('clients:detail', pk=client.pk)
     else:
-        form = EncaissementClientForm()
+        form = EncaissementClientForm(magasin=magasin)
     
     context = {
         'form': form,
