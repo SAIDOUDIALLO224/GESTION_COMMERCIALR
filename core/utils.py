@@ -24,7 +24,11 @@ def get_current_magasin(user):
         profil = _get_profil(user)
         if profil and profil.magasin:
             return profil.magasin
-        return None
+        # Fallback au magasin principal si pas de profil/magasin
+        principal = Magasin.objects.filter(est_principal=True).first()
+        if principal:
+            return principal
+        return Magasin.objects.first()
     profil = _get_profil(user)
     if profil and profil.magasin:
         return profil.magasin
