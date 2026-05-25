@@ -1,13 +1,9 @@
-import django
-import os
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+from django.core.management.base import BaseCommand
+from clients.models import Client
+from core.models import Magasin
 
-# --- Configuration ---
-NOM_MAGASIN = "MAGASIN GENERAL"
-EST_PRINCIPAL = False
 
-# --- Liste des clients ---
-clients_data = [
+CLIENTS = [
     (["626636363", "662737341"], "ABDOURAHMANE DISPENSAIRE", "CONAKRY"),
     (["620631007"], "ALPHA OUMAR KOLOMA", "CONAKRY"),
     (["626304604"], "ELHADJI AMADOU BAMBA", "CONAKRY"),
@@ -84,45 +80,42 @@ clients_data = [
     (["622559631"], "SOW OUSMANE PIERRE", "CONAKRY"),
 ]
 
-# --- Import ---
-def run():
-    from clients.models import Client
-    from core.models import Magasin
 
-    magasin, created = Magasin.objects.get_or_create(
-        nom=NOM_MAGASIN,
-        defaults={'adresse': 'Conakry, Guinée', 'est_principal': EST_PRINCIPAL}
-    )
-    if created:
-        print(f"✅ Magasin '{NOM_MAGASIN}' créé.")
-    else:
-        print(f"ℹ️  Magasin '{NOM_MAGASIN}' existe déjà (id={magasin.id}).")
+class Command(BaseCommand):
+    help = "Importe les clients dans MAGASIN GENERAL"
 
-    count = 0
-    for telephones, nom, ville in clients_data:
-        telephone = telephones[0]
-        telephone2 = telephones[1] if len(telephones) > 1 else ''
-        notes = f"Ville: {ville}"
-        if telephone2:
-            notes += f" | Téléphone(s): {', '.join(telephones)}"
-
-        Client.objects.get_or_create(
-            nom=nom,
-            telephone=telephone,
-            magasin=magasin,
-            defaults={
-                'telephone2': telephone2,
-                'notes': notes,
-                'quartier': ville,
-                'solde_du': 0,
-                'credit_disponible': 0,
-                'actif': True,
-            }
+    def handle(self, *args, **options):
+        magasin, created = Magasin.objects.get_or_create(
+            nom="MAGASIN GENERAL",
+            defaults={'adresse': 'Conakry, Guinée', 'est_principal': False}
         )
-        count += 1
+        if created:
+            self.stdout.write(self.style.SUCCESS(f"Magasin '{magasin.nom}' créé (id={magasin.id})."))
+        else:
+            self.stdout.write(f"Magasin '{magasin.nom}' trouvé (id={magasin.id}).")
 
-    print(f"✅ {count} clients importés dans '{NOM_MAGASIN}'.")
+        count = 0
+        for telephones, nom, ville in CLIENTS:
+            telephone = telephones[0]
+            telephone2 = telephones[1] if len(telephones) > 1 else ''
+            notes = f"Ville: {ville}"
+            if telephone2:
+                notes += f" | Téléphone(s): {', '.join(telephones)}"
 
-if __name__ == '__main__':
-    import django; django.setup()
-    run()
+            _, created = Client.objects.get_or_create(
+                nom=nom,
+                telephone=telephone,
+                magasin=magasin,
+                defaults={
+                    'telephone2': telephone2,
+                    'notes': notes,
+                    'quartier': ville,
+                    'solde_du': 0,
+                    'credit_disponible': 0,
+                    'actif': True,
+                }
+            )
+            if created:
+                count += 1
+
+        self.stdout.write(self.style.SUCCESS(f"{count} clients importés dans '{magasin.nom}'."))
