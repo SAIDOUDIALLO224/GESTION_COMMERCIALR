@@ -31,7 +31,7 @@ DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='127.0.0.1,localhost',
+    default='127.0.0.1,localhost,baillostock.pythonanywhere.com',
     cast=Csv(),
 )
 
