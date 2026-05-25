@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.db import transaction, ProtectedError
+from django.db import transaction
+from django.db.models import ProtectedError
 from django.db.models import Q, Sum, F, Count
 from django import forms
 from produits.models import Produit, Categorie
