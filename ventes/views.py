@@ -498,6 +498,10 @@ def encaisser_client(request):
                     
                     restant_a_distribuer -= montant_vente
                 
+                if surplus > 0 and paiement_principal:
+                    paiement_principal.montant_surplus = surplus
+                    paiement_principal.save(update_fields=['montant_surplus'])
+                
                 nouveau_solde_restant = sum(
                     v.solde_restant for v in Vente.objects.filter(client=client).filter(
                         Q(magasin__in=magasins)
@@ -550,9 +554,14 @@ def modifier_paiement(request, pk):
             diff = nouveau_montant - ancien_montant
             
             with transaction.atomic():
+                # Supprimer l'ancien surplus du crédit disponible
+                if ancien_surplus > 0:
+                    client.credit_disponible = max(Decimal('0'), client.credit_disponible - ancien_surplus)
+                
                 paiement.montant = nouveau_montant
                 paiement.mode_paiement = form.cleaned_data['mode_paiement']
                 paiement.reference = form.cleaned_data.get('reference', '')
+                paiement.montant_surplus = Decimal('0')
                 paiement.save()
                 
                 if diff > 0:
@@ -572,7 +581,22 @@ def modifier_paiement(request, pk):
                     )
                 )
                 client.solde_du = total_solde_restant
-                client.save(update_fields=['solde_du'])
+                
+                # Calculer le nouveau surplus si toutes les dettes sont soldées
+                if total_solde_restant == 0:
+                    total_paid = Paiement.objects.filter(client=client).filter(
+                        Q(vente__magasin__in=magasins)
+                    ).aggregate(t=Sum('montant'))['t'] or Decimal('0')
+                    total_billed = Vente.objects.filter(client=client).filter(
+                        Q(magasin__in=magasins)
+                    ).aggregate(t=Sum('montant_total'))['t'] or Decimal('0')
+                    nouveau_surplus = max(Decimal('0'), total_paid - total_billed)
+                    if nouveau_surplus > 0:
+                        client.credit_disponible += nouveau_surplus
+                        paiement.montant_surplus = nouveau_surplus
+                        paiement.save(update_fields=['montant_surplus'])
+                
+                client.save(update_fields=['solde_du', 'credit_disponible'])
             
             messages.success(request, f'Paiement modifié de {ancien_montant:,.0f} GNF vers {nouveau_montant:,.0f} GNF.')
             return redirect('clients:detail', pk=client.pk)
@@ -602,6 +626,7 @@ def supprimer_paiement(request, pk):
     )
     client_pk = paiement.client.pk
     vente = paiement.vente
+    surplus_paiement = paiement.surplus_effectif
     
     with transaction.atomic():
         vente.montant_paye = max(Decimal('0'), vente.montant_paye - paiement.montant)
@@ -610,13 +635,16 @@ def supprimer_paiement(request, pk):
         vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
         
         client = paiement.client
+        if surplus_paiement > 0:
+            client.credit_disponible = max(Decimal('0'), client.credit_disponible - surplus_paiement)
+        
         total_solde_restant = sum(
             v.solde_restant for v in Vente.objects.filter(client=client).filter(
                 Q(magasin__in=magasins)
             )
         )
         client.solde_du = total_solde_restant
-        client.save(update_fields=['solde_du'])
+        client.save(update_fields=['solde_du', 'credit_disponible'])
         
         paiement.delete()
     
