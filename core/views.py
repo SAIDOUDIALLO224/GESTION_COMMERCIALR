@@ -97,7 +97,7 @@ class MagasinForm(forms.ModelForm):
 
     class Meta:
         model = Magasin
-        fields = ['nom', 'adresse', 'actif', 'est_principal', 'magasins_visibles']
+        fields = ['nom', 'adresse', 'actif', 'est_principal']
         widgets = {
             'nom': forms.TextInput(attrs={
                 'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
@@ -115,9 +115,6 @@ class MagasinForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             del self.fields['copier_depuis']
-            self.fields['magasins_visibles'].queryset = Magasin.objects.exclude(pk=self.instance.pk)
-        else:
-            self.fields['magasins_visibles'].queryset = Magasin.objects.all()
 
 
 # ─── Magasin CRUD ──────────────────────
