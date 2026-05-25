@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.db import transaction, ProtectedError
 from django.db.models import Q, Sum, F, Count
 from django import forms
 from produits.models import Produit, Categorie
@@ -259,7 +260,22 @@ def supprimer_magasin(request, pk):
     magasin = get_object_or_404(Magasin, pk=pk)
     if request.method == 'POST':
         nom = magasin.nom
-        magasin.delete()
+        try:
+            with transaction.atomic():
+                magasin.delete()
+        except ProtectedError as e:
+            objets = e.protected_objects
+            details = []
+            for obj in objets:
+                nom_modele = obj._meta.verbose_name
+                details.append(f"{obj} ({nom_modele})")
+            messages.error(
+                request,
+                f'Impossible de supprimer "{nom}". '
+                f'Les éléments suivants y sont rattachés : {", ".join(details)}. '
+                f'Supprimez ou déplacez ces éléments d\'abord.'
+            )
+            return redirect('core:detail_magasin', pk=magasin.pk)
         messages.success(request, f'Magasin "{nom}" supprimé.')
     return redirect('core:liste_magasins')
 
