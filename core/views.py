@@ -216,6 +216,16 @@ def creer_magasin(request):
                     profil.save()
             except Exception:
                 pass
+            # Rattachement automatique des données orphelines si c'est le magasin principal
+            if magasin.est_principal:
+                count_produits = Produit.objects.filter(magasin__isnull=True).update(magasin=magasin)
+                count_ventes = Vente.objects.filter(magasin__isnull=True).update(magasin=magasin)
+                count_mouvements = MouvementStock.objects.filter(magasin__isnull=True).update(magasin=magasin)
+                total = count_produits + count_ventes + count_mouvements
+                if total > 0:
+                    messages.success(request,
+                        f'{count_produits} produit(s), {count_ventes} vente(s) et {count_mouvements} mouvement(s) '
+                        f'rattaché(s) automatiquement à "{magasin.nom}".')
             messages.success(request, f'Magasin "{magasin.nom}" créé.')
             return redirect('core:detail_magasin', pk=magasin.pk)
     else:
