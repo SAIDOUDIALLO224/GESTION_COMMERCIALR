@@ -172,7 +172,7 @@ def changer_magasin(request):
 
 @login_required
 def liste_magasins(request):
-    magasins = Magasin.objects.annotate(
+    magasins = get_magasins_visibles(request.user).annotate(
         nb_utilisateurs=Count('profilutilisateur'),
     ).order_by('nom')
     total_orphelins = (

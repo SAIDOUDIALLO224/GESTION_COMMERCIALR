@@ -83,6 +83,14 @@ class UtilisateurCreationForm(forms.Form):
 	)
 	magasin = forms.ModelChoiceField(
 		queryset=Magasin.objects.all(),
+		required=True,
+		label='Magasin',
+		widget=forms.Select(attrs={
+			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
+		}),
+	)
+	magasin = forms.ModelChoiceField(
+		queryset=Magasin.objects.all(),
 		required=False,
 		label='Magasin',
 		widget=forms.Select(attrs={
