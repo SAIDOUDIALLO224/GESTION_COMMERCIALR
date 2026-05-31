@@ -4,7 +4,6 @@ from django.contrib import messages
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db import transaction
-from django.db.models import ProtectedError
 from django.db.models import Q, Sum, F, Count
 from django import forms
 from produits.models import Produit, Categorie
@@ -265,10 +264,14 @@ def supprimer_magasin(request, pk):
     if request.method == 'POST':
         nom = magasin.nom
         with transaction.atomic():
+            # Rattacher les gérants au magasin principal avant suppression
+            principal = Magasin.objects.filter(est_principal=True).first()
+            if principal:
+                ProfilUtilisateur.objects.filter(magasin=magasin).update(magasin=principal)
             MouvementStock.objects.filter(magasin=magasin).delete()
             Vente.objects.filter(magasin=magasin).delete()
             Produit.objects.filter(magasin=magasin).delete()
-            # Catégories, clients et profils : SET_NULL mettra magasin=NULL automatiquement
+            # Catégories, clients : SET_NULL mettra magasin=NULL automatiquement
             magasin.delete()
         messages.success(request, f'Magasin "{nom}" et toutes ses données supprimés.')
     return redirect('core:liste_magasins')
