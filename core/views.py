@@ -264,10 +264,13 @@ def supprimer_magasin(request, pk):
     if request.method == 'POST':
         nom = magasin.nom
         with transaction.atomic():
-            # Rattacher les gérants au magasin principal avant suppression
-            principal = Magasin.objects.filter(est_principal=True).first()
-            if principal:
-                ProfilUtilisateur.objects.filter(magasin=magasin).update(magasin=principal)
+            # Supprimer les utilisateurs (gérants) de ce magasin
+            from django.contrib.auth.models import User
+            profils = ProfilUtilisateur.objects.filter(magasin=magasin)
+            User.objects.filter(
+                pk__in=profils.values('user_id'),
+                is_superuser=False  # Ne pas supprimer le superadmin
+            ).delete()
             MouvementStock.objects.filter(magasin=magasin).delete()
             Vente.objects.filter(magasin=magasin).delete()
             Produit.objects.filter(magasin=magasin).delete()
