@@ -62,6 +62,9 @@ def ajouter_solde_compte_bancaire(montant):
 
 @login_required
 def comptes_ecobanque_liste(request):
+    if not request.user.is_superuser:
+        messages.error(request, "Accès réservé au superadmin.")
+        return redirect('core:dashboard')
     comptes = CompteEcoBanqueClient.objects.select_related('client', 'utilisateur').order_by('-date_creation')
     
     total_montants_sortis_global = comptes.aggregate(total=models.Sum('montant_sorti'))['total'] or Decimal('0')
@@ -96,6 +99,9 @@ def comptes_ecobanque_liste(request):
 
 @login_required
 def comptes_ecobanque_form(request, pk=None):
+    if not request.user.is_superuser:
+        messages.error(request, "Accès réservé au superadmin.")
+        return redirect('core:dashboard')
     if pk:
         compte = get_object_or_404(CompteEcoBanqueClient, pk=pk)
         title = f"Modifier le compte {compte.client.nom}"
@@ -144,6 +150,9 @@ def comptes_ecobanque_form(request, pk=None):
 
 @login_required
 def compte_ecobanque_supprimer(request, pk):
+    if not request.user.is_superuser:
+        messages.error(request, "Accès réservé au superadmin.")
+        return redirect('core:dashboard')
     compte = get_object_or_404(CompteEcoBanqueClient, pk=pk)
     client_nom = compte.client.nom
     
