@@ -21,6 +21,9 @@ class AjustementStockForm(forms.Form):
             self.fields['produit'].queryset = Produit.objects.filter(
                 Q(magasin__in=magasins)
             )
+            self.fields['fournisseur'].queryset = Fournisseur.objects.filter(
+                Q(magasin__in=magasins)
+            ).order_by('nom')
 
     produit = forms.ModelChoiceField(
         queryset=Produit.objects.all(),

@@ -5,6 +5,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Sum
 from django import forms
 from .models import Fournisseur
+from core.utils import get_current_magasin
 
 
 class FournisseurForm(forms.ModelForm):
@@ -35,8 +36,9 @@ class FournisseurForm(forms.ModelForm):
 
 @login_required
 def liste_fournisseurs(request):
+	magasin = get_current_magasin(request.user)
 	search = request.GET.get('search', '')
-	fournisseurs = Fournisseur.objects.all()
+	fournisseurs = Fournisseur.objects.filter(magasin=magasin)
 
 	if search:
 		fournisseurs = fournisseurs.filter(
@@ -50,8 +52,8 @@ def liste_fournisseurs(request):
 	page_number = request.GET.get('page')
 	page_obj = paginator.get_page(page_number)
 
-	total_fournisseurs = Fournisseur.objects.count()
-	total_solde_du = Fournisseur.objects.aggregate(total=Sum('solde_du'))['total'] or 0
+	total_fournisseurs = Fournisseur.objects.filter(magasin=magasin).count()
+	total_solde_du = Fournisseur.objects.filter(magasin=magasin).aggregate(total=Sum('solde_du'))['total'] or 0
 
 	context = {
 		'fournisseurs': page_obj.object_list,
@@ -65,7 +67,8 @@ def liste_fournisseurs(request):
 
 @login_required
 def detail_fournisseur(request, pk):
-	fournisseur = get_object_or_404(Fournisseur, pk=pk)
+	magasin = get_current_magasin(request.user)
+	fournisseur = get_object_or_404(Fournisseur, pk=pk, magasin=magasin)
 	context = {'fournisseur': fournisseur}
 	return render(request, 'fournisseurs/detail.html', context)
 
@@ -75,7 +78,9 @@ def creer_fournisseur(request):
 	if request.method == 'POST':
 		form = FournisseurForm(request.POST)
 		if form.is_valid():
-			form.save()
+			fournisseur = form.save(commit=False)
+			fournisseur.magasin = get_current_magasin(request.user)
+			fournisseur.save()
 			if request.headers.get('HX-Request'):
 				messages.success(request, 'Fournisseur créé avec succès!')
 				return render(request, 'partials/modal_success.html', {'redirect_url': 'javascript:location.reload()'})
@@ -98,7 +103,8 @@ def creer_fournisseur(request):
 
 @login_required
 def modifier_fournisseur(request, pk):
-	fournisseur = get_object_or_404(Fournisseur, pk=pk)
+	magasin = get_current_magasin(request.user)
+	fournisseur = get_object_or_404(Fournisseur, pk=pk, magasin=magasin)
 	if request.method == 'POST':
 		form = FournisseurForm(request.POST, instance=fournisseur)
 		if form.is_valid():
@@ -122,7 +128,8 @@ def supprimer_fournisseur(request, pk):
 		messages.error(request, 'Methode non autorisee.')
 		return redirect('fournisseurs:liste')
 
-	fournisseur = get_object_or_404(Fournisseur, pk=pk)
+	magasin = get_current_magasin(request.user)
+	fournisseur = get_object_or_404(Fournisseur, pk=pk, magasin=magasin)
 	nom = fournisseur.nom
 	fournisseur.delete()
 	messages.success(request, f'Fournisseur « {nom} » supprime avec succes.')

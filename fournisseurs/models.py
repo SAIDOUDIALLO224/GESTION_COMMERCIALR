@@ -12,6 +12,10 @@ class Fournisseur(models.Model):
         verbose_name=_("Solde dû")
     )
     notes = models.TextField(blank=True, verbose_name=_("Notes"))
+    magasin = models.ForeignKey(
+        'core.Magasin', on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("Magasin")
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Créé le"))
 
     class Meta:

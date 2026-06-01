@@ -10,6 +10,9 @@ def _get_profil(user):
 
 def get_magasins_visibles(user):
     if user.is_superuser:
+        current = get_current_magasin(user)
+        if current:
+            return Magasin.objects.filter(pk=current.pk)
         return Magasin.objects.all()
     profil = _get_profil(user)
     if not profil or not profil.magasin:
