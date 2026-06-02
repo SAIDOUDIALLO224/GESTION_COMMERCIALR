@@ -269,35 +269,38 @@ def imprimer_clients_debiteurs(request):
     from weasyprint import HTML
     
     magasin = get_current_magasin(request.user)
-    magasins = get_magasins_visibles(request.user)
     clients_du_magasin = Client.objects.filter(magasin=magasin)
-    clients_debiteurs = clients_du_magasin.filter(solde_du__gt=0).filter(
-        Q(vente__magasin__in=magasins)
-    ).distinct().order_by('nom')
+
+    # Clients qui doivent à l'entreprise : solde_du > credit_disponible
+    clients_debiteurs = clients_du_magasin.filter(
+        solde_du__gt=F('credit_disponible')
+    ).order_by('nom')
+    # Clients à qui l'entreprise doit : credit_disponible > solde_du
     clients_entreprise_doit = clients_du_magasin.filter(
         credit_disponible__gt=F('solde_du')
-    ).filter(
-        Q(vente__magasin__in=magasins)
-    ).distinct().order_by('nom')
-    
+    ).order_by('nom')
+
     clients_debiteurs_data = []
     total_net_du = Decimal('0')
     for c in clients_debiteurs:
         net = c.solde_du - c.credit_disponible
         clients_debiteurs_data.append((c, net))
         total_net_du += net
-    
+
     clients_entreprise_doit_data = []
+    total_net_credit = Decimal('0')
     for c in clients_entreprise_doit:
         net = c.credit_disponible - c.solde_du
         clients_entreprise_doit_data.append((c, net))
-    
+        total_net_credit += net
+
     context = {
         'clients_debiteurs': clients_debiteurs_data,
         'clients_entreprise_doit': clients_entreprise_doit_data,
         'total_clients_debiteurs': len(clients_debiteurs_data),
         'total_clients_credit': len(clients_entreprise_doit_data),
         'total_net_du': total_net_du,
+        'total_net_credit': total_net_credit,
     }
     
     html_string = render_to_string('clients/pdf_debiteurs.html', context, request=request)

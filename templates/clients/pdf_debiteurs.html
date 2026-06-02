@@ -30,7 +30,7 @@
     <div class="kpis">
         <p><strong>Clients débiteurs:</strong> {{ total_clients_debiteurs|intcomma }} &mdash; Total net dû: <span class="total-red">{{ total_net_du|floatformat:0|intcomma }} GNF</span></p>
         {% if clients_entreprise_doit %}
-        <p><strong>L'entreprise doit à:</strong> {{ total_clients_credit|intcomma }} client(s)</p>
+        <p><strong>L'entreprise doit à:</strong> {{ total_clients_credit|intcomma }} client(s) &mdash; Total net à rendre: <span class="total-cyan">{{ total_net_credit|floatformat:0|intcomma }} GNF</span></p>
         {% endif %}
     </div>
 
