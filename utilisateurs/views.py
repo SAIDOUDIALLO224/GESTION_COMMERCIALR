@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import ProfilUtilisateur
 from core.models import Magasin
+from produits.models import Categorie
 
 
 class UtilisateurCreationForm(forms.Form):
@@ -83,10 +84,19 @@ class UtilisateurCreationForm(forms.Form):
 	)
 	magasin = forms.ModelChoiceField(
 		queryset=Magasin.objects.all(),
-		required=True,
+		required=False,
 		label='Magasin',
 		widget=forms.Select(attrs={
 			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
+		}),
+	)
+	categories_autorisees = forms.ModelMultipleChoiceField(
+		queryset=Categorie.objects.all(),
+		required=False,
+		label='Catégories autorisées',
+		widget=forms.SelectMultiple(attrs={
+			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
+			'size': 8,
 		}),
 	)
 	magasin = forms.ModelChoiceField(
@@ -95,6 +105,15 @@ class UtilisateurCreationForm(forms.Form):
 		label='Magasin',
 		widget=forms.Select(attrs={
 			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
+		}),
+	)
+	categories_autorisees = forms.ModelMultipleChoiceField(
+		queryset=Categorie.objects.all(),
+		required=False,
+		label='Catégories autorisées',
+		widget=forms.SelectMultiple(attrs={
+			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
+			'size': 8,
 		}),
 	)
 
@@ -266,13 +285,14 @@ def creer_utilisateur(request):
 					is_superuser=False,
 					is_active=True,
 				)
-			ProfilUtilisateur.objects.create(
+			profil = ProfilUtilisateur.objects.create(
 				user=user,
 				role=form.cleaned_data['role'],
 				telephone=form.cleaned_data['telephone'],
 				actif=True,
 				magasin=form.cleaned_data.get('magasin'),
 			)
+			profil.categories_autorisees.set(form.cleaned_data.get('categories_autorisees', []))
 
 			messages.success(request, f"Utilisateur {user.username} cree avec succes.")
 			return redirect('utilisateurs:liste')
@@ -312,6 +332,7 @@ def modifier_utilisateur(request, pk):
 			profil.magasin = form.cleaned_data.get('magasin')
 			profil.actif = user_obj.is_active
 			profil.save()
+			profil.categories_autorisees.set(form.cleaned_data.get('categories_autorisees', []))
 
 			messages.success(request, f'Utilisateur {user_obj.username} modifie avec succes.')
 			return redirect('utilisateurs:liste')
@@ -324,6 +345,7 @@ def modifier_utilisateur(request, pk):
 			'role': profil.role,
 			'est_admin': user_obj.is_staff,
 			'magasin': profil.magasin,
+			'categories_autorisees': profil.categories_autorisees.all(),
 		})
 
 	context = {

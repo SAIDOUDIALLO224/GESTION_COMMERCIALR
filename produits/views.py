@@ -17,12 +17,13 @@ from stock.models import MouvementStock
 from django import forms
 from weasyprint import HTML
 from utilisateurs.decorators import gerant_required
-from core.utils import get_magasins_visibles, get_current_magasin
+from core.utils import get_magasins_visibles, get_current_magasin, get_categories_autorisees
 
 
 class ProduitForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         magasin = kwargs.pop('magasin', None)
+        cat_ids = kwargs.pop('cat_ids', None)
         super().__init__(*args, **kwargs)
         if not self.instance or not self.instance.pk:
             self.fields['code'].required = False
@@ -34,7 +35,10 @@ class ProduitForm(forms.ModelForm):
             self.ancien_stock_actuel = self.instance.stock_actuel
             self.ancien_seuil_alerte = self.instance.seuil_alerte
         if magasin:
-            self.fields['categorie'].queryset = Categorie.objects.filter(magasin=magasin)
+            qs = Categorie.objects.filter(magasin=magasin)
+            if cat_ids is not None:
+                qs = qs.filter(pk__in=cat_ids)
+            self.fields['categorie'].queryset = qs
 
     class Meta:
         model = Produit
@@ -77,12 +81,15 @@ def liste_produits(request):
     search = request.GET.get('search', '')
     categorie_id = request.GET.get('categorie', '')
     magasins = get_magasins_visibles(request.user)
+    cat_ids = get_categories_autorisees(request.user)
     produits = _produits_visibles(magasins).annotate(
         quantite_vendue=Coalesce(
             Sum('lignevente__quantite'),
             Value(0, output_field=DecimalField(max_digits=12, decimal_places=3)),
         ),
     )
+    if cat_ids is not None:
+        produits = produits.filter(categorie_id__in=cat_ids)
 
     if search:
         produits = produits.filter(Q(nom__icontains=search) | Q(code__icontains=search))
@@ -95,7 +102,10 @@ def liste_produits(request):
     page_obj = paginator.get_page(page_number)
 
     current = get_current_magasin(request.user)
-    categories = Categorie.objects.filter(magasin=current).annotate(nb_produits=Count('produit')).order_by('nom')
+    categories_filtre = Categorie.objects.filter(magasin=current)
+    if cat_ids is not None:
+        categories_filtre = categories_filtre.filter(pk__in=cat_ids)
+    categories = categories_filtre.annotate(nb_produits=Count('produit')).order_by('nom')
     context = {
         'page_obj': page_obj,
         'produits': page_obj.object_list,
@@ -178,8 +188,9 @@ def detail_produit(request, pk):
 @gerant_required
 def creer_produit(request):
     magasin = get_current_magasin(request.user)
+    cat_ids = get_categories_autorisees(request.user)
     if request.method == 'POST':
-        form = ProduitForm(request.POST, request.FILES, magasin=magasin)
+        form = ProduitForm(request.POST, request.FILES, magasin=magasin, cat_ids=cat_ids)
         if form.is_valid():
             produit = form.save(commit=False)
             produit.magasin = magasin
@@ -191,7 +202,7 @@ def creer_produit(request):
                 messages.success(request, 'Produit créé avec succès!')
                 return redirect('produits:liste')
     else:
-        form = ProduitForm(magasin=magasin)
+        form = ProduitForm(magasin=magasin, cat_ids=cat_ids)
 
     context = {
         'form': form,

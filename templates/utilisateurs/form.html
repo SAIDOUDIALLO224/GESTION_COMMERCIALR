@@ -81,6 +81,13 @@
             {% if form.magasin.errors %}<p class="text-sm text-red-600 mt-1">{{ form.magasin.errors.0 }}</p>{% endif %}
         </div>
 
+        <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-1">{{ form.categories_autorisees.label }}</label>
+            <p class="text-xs text-gray-500 mb-1">Si aucune sélectionnée, l'utilisateur voit toutes les catégories.</p>
+            {{ form.categories_autorisees }}
+            {% if form.categories_autorisees.errors %}<p class="text-sm text-red-600 mt-1">{{ form.categories_autorisees.errors.0 }}</p>{% endif %}
+        </div>
+
         <div class="flex items-center gap-2">
             {{ form.est_admin }}
             <label class="text-sm text-gray-700" for="{{ form.est_admin.id_for_label }}">{{ form.est_admin.label }}</label>

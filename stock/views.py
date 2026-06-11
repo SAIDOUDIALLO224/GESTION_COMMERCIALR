@@ -10,17 +10,19 @@ from produits.models import Produit
 from fournisseurs.models import Fournisseur
 from weasyprint import HTML
 from django import forms
-from core.utils import get_magasins_visibles, get_current_magasin
+from core.utils import get_magasins_visibles, get_current_magasin, get_categories_autorisees
 
 
 class AjustementStockForm(forms.Form):
     def __init__(self, *args, **kwargs):
         magasins = kwargs.pop('magasins', None)
+        cat_ids = kwargs.pop('cat_ids', None)
         super().__init__(*args, **kwargs)
         if magasins is not None:
-            self.fields['produit'].queryset = Produit.objects.filter(
-                Q(magasin__in=magasins)
-            )
+            qs = Produit.objects.filter(Q(magasin__in=magasins))
+            if cat_ids is not None:
+                qs = qs.filter(categorie_id__in=cat_ids)
+            self.fields['produit'].queryset = qs
             self.fields['fournisseur'].queryset = Fournisseur.objects.filter(
                 Q(magasin__in=magasins)
             ).order_by('nom')
@@ -79,8 +81,9 @@ class AjustementStockForm(forms.Form):
 @login_required
 def ajuster_stock(request):
     magasins = get_magasins_visibles(request.user)
+    cat_ids = get_categories_autorisees(request.user)
     if request.method == 'POST':
-        form = AjustementStockForm(request.POST, magasins=magasins)
+        form = AjustementStockForm(request.POST, magasins=magasins, cat_ids=cat_ids)
         if form.is_valid():
             produit = form.cleaned_data['produit']
             quantite = form.cleaned_data['quantite']
@@ -110,7 +113,7 @@ def ajuster_stock(request):
             messages.success(request, 'Ajustement de stock enregistré!')
             return redirect('stock:ajuster')
     else:
-        form = AjustementStockForm(magasins=magasins)
+        form = AjustementStockForm(magasins=magasins, cat_ids=cat_ids)
     
     mouvements = MouvementStock.objects.select_related('produit', 'utilisateur', 'fournisseur').filter(Q(magasin__in=magasins)).order_by('-created_at')[:20]
     total_mouvements = MouvementStock.objects.filter(Q(magasin__in=magasins)).count()

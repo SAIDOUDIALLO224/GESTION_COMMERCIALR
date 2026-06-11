@@ -15,7 +15,7 @@ import uuid
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML
-from core.utils import get_magasins_visibles, get_current_magasin
+from core.utils import get_magasins_visibles, get_current_magasin, get_categories_autorisees, get_or_create_consommateur
 
 
 class VenteForm(forms.Form):
@@ -162,14 +162,19 @@ class ModifierPaiementForm(forms.Form):
 def nouvelle_vente(request):
     magasins = get_magasins_visibles(request.user)
     magasin = get_current_magasin(request.user)
+    cat_ids = get_categories_autorisees(request.user)
     if request.method == 'POST':
         form = VenteForm(request.POST, magasin=magasin)
         if form.is_valid():
             with transaction.atomic():
+                # Si pas de client sélectionné, utiliser le client "Consommateur"
+                client = form.cleaned_data.get('client')
+                if not client:
+                    client = get_or_create_consommateur(magasin)
                 # Créer la vente
                 vente = Vente.objects.create(
                     numero=f"VTE-{uuid.uuid4().hex[:8].upper()}",
-                    client=form.cleaned_data.get('client'),
+                    client=client,
                     montant_total=0,
                     utilisateur=request.user,
                     magasin=get_current_magasin(request.user),
@@ -313,7 +318,10 @@ def nouvelle_vente(request):
     
     produits = Produit.objects.filter(actif=True).filter(
         Q(magasin__in=magasins)
-    ).select_related('categorie').order_by('categorie__nom', 'nom')
+    )
+    if cat_ids is not None:
+        produits = produits.filter(categorie_id__in=cat_ids)
+    produits = produits.select_related('categorie').order_by('categorie__nom', 'nom')
     context = {
         'form': form,
         'produits': produits,

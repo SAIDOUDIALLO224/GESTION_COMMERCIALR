@@ -36,3 +36,28 @@ def get_current_magasin(user):
     if profil and profil.magasin:
         return profil.magasin
     return None
+
+
+def get_categories_autorisees(user):
+    """Retourne les IDs des catégories autorisées pour un utilisateur.
+    None = pas de restriction."""
+    if user.is_superuser:
+        return None
+    profil = _get_profil(user)
+    if not profil:
+        return None
+    cats = profil.categories_autorisees.all()
+    if not cats:
+        return None
+    return list(cats.values_list('id', flat=True))
+
+
+def get_or_create_consommateur(magasin):
+    """Retourne le client générique 'Consommateur' pour un magasin."""
+    from clients.models import Client
+    conso, _ = Client.objects.get_or_create(
+        nom="Consommateur",
+        magasin=magasin,
+        defaults={'telephone': '', 'actif': True},
+    )
+    return conso

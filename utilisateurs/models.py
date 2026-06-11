@@ -18,6 +18,9 @@ class ProfilUtilisateur(models.Model):
         'core.Magasin', on_delete=models.SET_NULL, null=True, blank=True,
         verbose_name=_("Magasin")
     )
+    categories_autorisees = models.ManyToManyField(
+        'produits.Categorie', blank=True, verbose_name=_("Catégories autorisées")
+    )
 
     class Meta:
         verbose_name = _("Profil utilisateur")
