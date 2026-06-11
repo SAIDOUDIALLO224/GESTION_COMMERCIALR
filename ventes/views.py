@@ -420,9 +420,11 @@ def supprimer_vente(request, pk):
             produit.stock_actuel += ligne.quantite
             produit.save(update_fields=['stock_actuel'])
 
-        if vente.client and vente.solde_restant > 0:
+        if vente.client:
+            montant_paye = vente.montant_total - vente.solde_restant
             vente.client.solde_du = max(Decimal('0'), vente.client.solde_du - vente.solde_restant)
-            vente.client.save(update_fields=['solde_du'])
+            vente.client.credit_disponible += montant_paye
+            vente.client.save(update_fields=['solde_du', 'credit_disponible'])
 
         numero_vente = vente.numero
         vente.delete()

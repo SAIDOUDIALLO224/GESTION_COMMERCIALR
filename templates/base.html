@@ -284,6 +284,46 @@
                 event.detail.headers['X-CSRFToken'] = token;
             }
         });
+
+        // Empêcher double soumission des formulaires
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            const btns = form.querySelectorAll('button[type="submit"]');
+            btns.forEach(function(btn) {
+                btn.disabled = true;
+                btn._origText = btn._origText || btn.innerHTML;
+                btn.innerHTML = 'Enregistrement...';
+            });
+        });
+
+        // Empêcher double soumission HTMX
+        document.addEventListener('htmx:beforeRequest', function(e) {
+            const elt = e.detail.elt;
+            const btn = elt.tagName === 'BUTTON' ? elt : elt.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn._origText = btn._origText || btn.innerHTML;
+                btn.innerHTML = 'Enregistrement...';
+            }
+        });
+        document.addEventListener('htmx:afterRequest', function(e) {
+            const elt = e.detail.elt;
+            const btn = elt.tagName === 'BUTTON' ? elt : elt.querySelector('button[type="submit"]');
+            if (btn && btn._origText) {
+                btn.disabled = false;
+                btn.innerHTML = btn._origText;
+                btn._origText = null;
+            }
+        });
+        document.addEventListener('htmx:beforeOnLoad', function(e) {
+            const elt = e.detail.elt;
+            const btn = elt.tagName === 'BUTTON' ? elt : elt.querySelector('button[type="submit"]');
+            if (btn && btn._origText) {
+                btn.disabled = false;
+                btn.innerHTML = btn._origText;
+                btn._origText = null;
+            }
+        });
     </script>
     <script src="/static/js/app.js" defer></script>
     {% block extra_js %}{% endblock %}
