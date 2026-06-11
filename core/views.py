@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -112,10 +113,21 @@ class MagasinForm(forms.ModelForm):
             }),
         }
 
+    gerant = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_superuser=False),
+        required=False,
+        label="Gérant du magasin",
+        help_text="Utilisateur qui gérera ce magasin (optionnel).",
+        widget=forms.Select(attrs={
+            'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500',
+        }),
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             del self.fields['copier_depuis']
+            del self.fields['gerant']
 
 
 # ─── Magasin CRUD ──────────────────────
@@ -211,13 +223,13 @@ def creer_magasin(request):
                     )
                     count += 1
                 messages.success(request, f'Catalogue copié ({count} produits depuis "{source.nom}").')
-            profil, created = ProfilUtilisateur.objects.get_or_create(
-                user=request.user,
-                defaults={'role': 'GERANT', 'magasin': magasin}
-            )
-            if not profil.magasin:
-                profil.magasin = magasin
-                profil.save()
+            # Assigner le gérant sélectionné au nouveau magasin
+            gerant = form.cleaned_data.get('gerant')
+            if gerant:
+                ProfilUtilisateur.objects.update_or_create(
+                    user=gerant,
+                    defaults={'role': 'GERANT', 'magasin': magasin, 'actif': True},
+                )
             # Rattachement automatique des données orphelines si c'est le magasin principal
             if magasin.est_principal:
                 count_produits = Produit.objects.filter(magasin__isnull=True).update(magasin=magasin)
