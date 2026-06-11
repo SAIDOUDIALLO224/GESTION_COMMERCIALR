@@ -167,9 +167,12 @@ def nouvelle_vente(request):
         form = VenteForm(request.POST, magasin=magasin)
         if form.is_valid():
             with transaction.atomic():
-                # Si pas de client sélectionné, utiliser le client "Consommateur"
+                # Si pas de client sélectionné
                 client = form.cleaned_data.get('client')
                 if not client:
+                    if magasin and magasin.est_principal:
+                        messages.error(request, 'Le grand magasin nécessite la sélection d\'un client.')
+                        return redirect('ventes:nouvelle')
                     client = get_or_create_consommateur(magasin)
                 # Créer la vente
                 vente = Vente.objects.create(
