@@ -272,6 +272,11 @@ def creer_categorie(request):
             categorie = form.save(commit=False)
             categorie.magasin = get_current_magasin(request.user)
             categorie.save()
+            # Ajouter automatiquement aux categories autorisees du gerant
+            try:
+                request.user.profilutilisateur.categories_autorisees.add(categorie)
+            except Exception:
+                pass
             return _categories_list_response(request)
         return render(request, 'produits/partials/categorie_form.html',
                       {'form': form, 'action_url': request.path})
