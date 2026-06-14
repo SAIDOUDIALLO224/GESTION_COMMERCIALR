@@ -7,12 +7,16 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from .models import Produit, Categorie
+from core.models import Entrepot
 
 
-def _produits_visibles(magasins):
-    return Produit.objects.select_related('categorie').filter(
+def _produits_visibles(magasins, entrepot=None):
+    qs = Produit.objects.select_related('categorie').filter(
         Q(magasin__in=magasins)
     )
+    if entrepot:
+        qs = qs.filter(entrepot=entrepot)
+    return qs
 from stock.models import MouvementStock
 from django import forms
 from weasyprint import HTML
@@ -25,6 +29,7 @@ class ProduitForm(forms.ModelForm):
         magasin = kwargs.pop('magasin', None)
         cat_ids = kwargs.pop('cat_ids', None)
         super().__init__(*args, **kwargs)
+        self._cat_ids = cat_ids
         if not self.instance or not self.instance.pk:
             self.fields['code'].required = False
         else:
@@ -39,6 +44,23 @@ class ProduitForm(forms.ModelForm):
             if cat_ids is not None:
                 qs = qs.filter(pk__in=cat_ids)
             self.fields['categorie'].queryset = qs
+            if not magasin.est_principal:
+                entrepots_qs = Entrepot.objects.filter(magasin=magasin).order_by('nom')
+                self.fields['entrepot'] = forms.ModelChoiceField(
+                    queryset=entrepots_qs, required=True,
+                    label="Entrepôt",
+                    widget=forms.Select(attrs={
+                        'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white',
+                    }),
+                )
+                if self.instance and self.instance.pk and self.instance.entrepot_id:
+                    self.initial['entrepot'] = self.instance.entrepot
+
+    def clean_categorie(self):
+        cat = self.cleaned_data.get('categorie')
+        if self._cat_ids is not None and cat is not None and cat.pk not in self._cat_ids:
+            raise forms.ValidationError("Vous n'êtes pas autorisé à utiliser cette catégorie.")
+        return cat
 
     class Meta:
         model = Produit
@@ -80,6 +102,7 @@ class CategorieForm(forms.ModelForm):
 def liste_produits(request):
     search = request.GET.get('search', '')
     categorie_id = request.GET.get('categorie', '')
+    entrepot_id = request.GET.get('entrepot', '')
     magasins = get_magasins_visibles(request.user)
     cat_ids = get_categories_autorisees(request.user)
     produits = _produits_visibles(magasins).annotate(
@@ -95,6 +118,8 @@ def liste_produits(request):
         produits = produits.filter(Q(nom__icontains=search) | Q(code__icontains=search))
     if categorie_id:
         produits = produits.filter(categorie_id=categorie_id)
+    if entrepot_id and entrepot_id.isdigit():
+        produits = produits.filter(entrepot_id=int(entrepot_id))
     produits = produits.order_by('nom')
 
     paginator = Paginator(produits, 25)
@@ -106,12 +131,16 @@ def liste_produits(request):
     if cat_ids is not None:
         categories_filtre = categories_filtre.filter(pk__in=cat_ids)
     categories = categories_filtre.annotate(nb_produits=Count('produit')).order_by('nom')
+    entrepots_liste = Entrepot.objects.filter(magasin=current).order_by('nom') if current and not current.est_principal else []
     context = {
         'page_obj': page_obj,
         'produits': page_obj.object_list,
         'search': search,
         'categorie_id': categorie_id,
         'categories': categories,
+        'show_entrepot': current and not current.est_principal,
+        'entrepots_liste': entrepots_liste,
+        'selected_entrepot': entrepot_id,
     }
 
     # HTMX partial response (not for hx-boost full-page navigation)
@@ -125,9 +154,16 @@ def liste_produits(request):
 def imprimer_produits(request):
     search = request.GET.get('search', '')
     categorie_id = request.GET.get('categorie', '')
+    entrepot_id = request.GET.get('entrepot', '')
 
     magasins = get_magasins_visibles(request.user)
-    produits = _produits_visibles(magasins).order_by('nom')
+    cat_ids = get_categories_autorisees(request.user)
+    produits = _produits_visibles(magasins)
+    if cat_ids is not None:
+        produits = produits.filter(categorie_id__in=cat_ids)
+    if entrepot_id and entrepot_id.isdigit():
+        produits = produits.filter(entrepot_id=int(entrepot_id))
+    produits = produits.order_by('nom')
     
     if search:
         produits = produits.filter(Q(nom__icontains=search) | Q(code__icontains=search))
@@ -171,8 +207,12 @@ def imprimer_produits(request):
 @login_required
 def detail_produit(request, pk):
     magasins = get_magasins_visibles(request.user)
+    cat_ids = get_categories_autorisees(request.user)
+    qs = _produits_visibles(magasins)
+    if cat_ids is not None:
+        qs = qs.filter(categorie_id__in=cat_ids)
     produit = get_object_or_404(
-        _produits_visibles(magasins).annotate(
+        qs.annotate(
             quantite_vendue=Coalesce(
                 Sum('lignevente__quantite'),
                 Value(0, output_field=DecimalField(max_digits=12, decimal_places=3)),
@@ -194,6 +234,8 @@ def creer_produit(request):
         if form.is_valid():
             produit = form.save(commit=False)
             produit.magasin = magasin
+            if 'entrepot' in form.cleaned_data and form.cleaned_data['entrepot']:
+                produit.entrepot = form.cleaned_data['entrepot']
             produit.save()
             if request.headers.get('HX-Request'):
                 messages.success(request, 'Produit créé avec succès!')
@@ -221,15 +263,22 @@ def creer_produit(request):
 def modifier_produit(request, pk):
     magasins = get_magasins_visibles(request.user)
     magasin = get_current_magasin(request.user)
-    produit = get_object_or_404(_produits_visibles(magasins), pk=pk)
+    cat_ids = get_categories_autorisees(request.user)
+    qs = _produits_visibles(magasins)
+    if cat_ids is not None:
+        qs = qs.filter(categorie_id__in=cat_ids)
+    produit = get_object_or_404(qs, pk=pk)
     if request.method == 'POST':
-        form = ProduitForm(request.POST, request.FILES, instance=produit, magasin=magasin)
+        form = ProduitForm(request.POST, request.FILES, instance=produit, magasin=magasin, cat_ids=cat_ids)
         if form.is_valid():
-            form.save()
+            produit = form.save(commit=False)
+            if 'entrepot' in form.cleaned_data and form.cleaned_data['entrepot']:
+                produit.entrepot = form.cleaned_data['entrepot']
+            produit.save()
             messages.success(request, 'Produit modifié avec succès!')
             return redirect('produits:detail', pk=produit.pk)
     else:
-        form = ProduitForm(instance=produit, magasin=magasin)
+        form = ProduitForm(instance=produit, magasin=magasin, cat_ids=cat_ids)
 
     context = {
         'form': form,
@@ -244,7 +293,11 @@ def modifier_produit(request, pk):
 @gerant_required
 def supprimer_produit(request, pk):
     magasins = get_magasins_visibles(request.user)
-    produit = get_object_or_404(_produits_visibles(magasins), pk=pk)
+    cat_ids = get_categories_autorisees(request.user)
+    qs = _produits_visibles(magasins)
+    if cat_ids is not None:
+        qs = qs.filter(categorie_id__in=cat_ids)
+    produit = get_object_or_404(qs, pk=pk)
     if request.method == 'POST':
         nom = produit.nom
         produit.delete()

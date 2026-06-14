@@ -4,15 +4,23 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .models import ProfilUtilisateur
-from core.models import Magasin
-from produits.models import Categorie
+from core.models import Magasin, Entrepot
+from produits.models import Categorie, Produit
+from ventes.models import Vente
+from core.utils import get_current_magasin, get_magasins_visibles
 
 
 class UtilisateurCreationForm(forms.Form):
+	def __init__(self, *args, **kwargs):
+		magasin = kwargs.pop('magasin', None)
+		super().__init__(*args, **kwargs)
+		if magasin is not None:
+			self.fields['categories_autorisees'].queryset = Categorie.objects.filter(magasin=magasin)
+
 	username = forms.CharField(
 		max_length=150,
 		label="Nom d'utilisateur",
@@ -99,21 +107,12 @@ class UtilisateurCreationForm(forms.Form):
 			'size': 8,
 		}),
 	)
-	magasin = forms.ModelChoiceField(
-		queryset=Magasin.objects.all(),
+	entrepot = forms.ModelChoiceField(
+		queryset=Entrepot.objects.all(),
 		required=False,
-		label='Magasin',
+		label="Entrepôt",
 		widget=forms.Select(attrs={
 			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
-		}),
-	)
-	categories_autorisees = forms.ModelMultipleChoiceField(
-		queryset=Categorie.objects.all(),
-		required=False,
-		label='Catégories autorisées',
-		widget=forms.SelectMultiple(attrs={
-			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
-			'size': 8,
 		}),
 	)
 
@@ -132,6 +131,12 @@ class UtilisateurCreationForm(forms.Form):
 
 
 class UtilisateurEditionForm(forms.Form):
+	def __init__(self, *args, **kwargs):
+		magasin = kwargs.pop('magasin', None)
+		super().__init__(*args, **kwargs)
+		if magasin is not None:
+			self.fields['categories_autorisees'].queryset = Categorie.objects.filter(magasin=magasin)
+
 	first_name = forms.CharField(
 		max_length=150,
 		required=False,
@@ -192,6 +197,23 @@ class UtilisateurEditionForm(forms.Form):
 		queryset=Magasin.objects.all(),
 		required=False,
 		label='Magasin',
+		widget=forms.Select(attrs={
+			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
+		}),
+	)
+	categories_autorisees = forms.ModelMultipleChoiceField(
+		queryset=Categorie.objects.all(),
+		required=False,
+		label='Catégories autorisées',
+		widget=forms.SelectMultiple(attrs={
+			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
+			'size': 8,
+		}),
+	)
+	entrepot = forms.ModelChoiceField(
+		queryset=Entrepot.objects.all(),
+		required=False,
+		label="Entrepôt",
 		widget=forms.Select(attrs={
 			'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500',
 		}),
@@ -271,8 +293,9 @@ def creer_utilisateur(request):
 	if not _superadmin_required(request):
 		return redirect('core:dashboard')
 
+	magasin = get_current_magasin(request.user)
 	if request.method == 'POST':
-		form = UtilisateurCreationForm(request.POST)
+		form = UtilisateurCreationForm(request.POST, magasin=magasin)
 		if form.is_valid():
 			with transaction.atomic():
 				user = User.objects.create_user(
@@ -291,13 +314,14 @@ def creer_utilisateur(request):
 				telephone=form.cleaned_data['telephone'],
 				actif=True,
 				magasin=form.cleaned_data.get('magasin'),
+				entrepot=form.cleaned_data.get('entrepot'),
 			)
 			profil.categories_autorisees.set(form.cleaned_data.get('categories_autorisees', []))
 
 			messages.success(request, f"Utilisateur {user.username} cree avec succes.")
 			return redirect('utilisateurs:liste')
 	else:
-		form = UtilisateurCreationForm(initial={'role': 'EMPLOYE'})
+		form = UtilisateurCreationForm(initial={'role': 'EMPLOYE'}, magasin=magasin)
 
 	return render(request, 'utilisateurs/form.html', {'form': form})
 
@@ -312,9 +336,10 @@ def modifier_utilisateur(request, pk):
 		user=user_obj,
 		defaults={'role': 'EMPLOYE', 'telephone': '', 'actif': user_obj.is_active},
 	)
+	magasin = get_current_magasin(request.user)
 
 	if request.method == 'POST':
-		form = UtilisateurEditionForm(request.POST)
+		form = UtilisateurEditionForm(request.POST, magasin=magasin)
 		if form.is_valid():
 			user_obj.first_name = form.cleaned_data['first_name']
 			user_obj.last_name = form.cleaned_data['last_name']
@@ -331,6 +356,7 @@ def modifier_utilisateur(request, pk):
 			profil.telephone = form.cleaned_data['telephone']
 			profil.magasin = form.cleaned_data.get('magasin')
 			profil.actif = user_obj.is_active
+			profil.entrepot = form.cleaned_data.get('entrepot')
 			profil.save()
 			profil.categories_autorisees.set(form.cleaned_data.get('categories_autorisees', []))
 
@@ -346,7 +372,8 @@ def modifier_utilisateur(request, pk):
 			'est_admin': user_obj.is_staff,
 			'magasin': profil.magasin,
 			'categories_autorisees': profil.categories_autorisees.all(),
-		})
+			'entrepot': profil.entrepot,
+		}, magasin=magasin)
 
 	context = {
 		'form': form,
@@ -409,3 +436,89 @@ def supprimer_utilisateur(request, pk):
 	user_obj.delete()
 	messages.success(request, f'Utilisateur {username} supprime avec succes.')
 	return redirect('utilisateurs:liste')
+
+
+@login_required
+def mon_entrepot(request):
+    magasin = get_current_magasin(request.user)
+    if magasin and magasin.est_principal:
+        messages.info(request, "Le grand magasin n'utilise pas le système d'entrepôts.")
+        return redirect('core:dashboard')
+
+    profil, _ = ProfilUtilisateur.objects.get_or_create(
+        user=request.user,
+        defaults={'role': 'EMPLOYE'},
+    )
+
+    entrepots = Entrepot.objects.filter(magasin=magasin).order_by('nom')
+
+    if request.method == 'POST':
+        entrepot_id = request.POST.get('entrepot')
+        if entrepot_id:
+            try:
+                profil.entrepot = Entrepot.objects.get(pk=entrepot_id, magasin=magasin)
+                profil.save(update_fields=['entrepot'])
+                messages.success(request, "Entrepôt mis à jour.")
+            except Entrepot.DoesNotExist:
+                messages.error(request, "Entrepôt invalide.")
+        else:
+            profil.entrepot = None
+            profil.save(update_fields=['entrepot'])
+            messages.success(request, "Entrepôt retiré.")
+        return redirect('utilisateurs:mon_entrepot')
+
+    return render(request, 'utilisateurs/mon_entrepot.html', {
+        'profil': profil,
+        'entrepots': entrepots,
+    })
+
+
+@login_required
+def liste_entrepots(request):
+    magasin = get_current_magasin(request.user)
+    if not magasin or magasin.est_principal:
+        messages.info(request, "Cette page est réservée aux petits magasins.")
+        return redirect('core:dashboard')
+
+    if request.method == 'POST':
+        nom = request.POST.get('nom', '').strip()
+        if nom:
+            Entrepot.objects.get_or_create(nom=nom, magasin=magasin)
+            messages.success(request, f"Entrepôt « {nom} » créé.")
+        else:
+            messages.error(request, "Veuillez saisir un nom.")
+        return redirect('utilisateurs:liste_entrepots')
+
+    q = request.GET.get('q', '').strip()
+    magasins = get_magasins_visibles(request.user)
+    entrepots_qs = Entrepot.objects.filter(magasin=magasin).order_by('nom')
+    if q:
+        entrepots_qs = entrepots_qs.filter(nom__icontains=q)
+
+    entrepots = []
+    for e in entrepots_qs:
+        produits = Produit.objects.filter(entrepot=e, magasin__in=magasins)
+        produits_ids = produits.values_list('pk', flat=True)
+        ventes = Vente.objects.filter(lignes__produit_id__in=produits_ids, magasin__in=magasins)
+        total_ventes = ventes.aggregate(s=Sum('montant_total'))['s'] or 0
+
+        utilisateurs = (
+            User.objects.filter(profilutilisateur__entrepot=e, profilutilisateur__magasin=magasin)
+            .values_list('username', flat=True)
+        )
+
+        entrepots.append({
+            'nom': e.nom,
+            'nb_produits': produits.count(),
+            'nb_ventes': ventes.distinct().count(),
+            'total_ventes': total_ventes,
+            'stock_total': produits.aggregate(s=Sum('stock_actuel'))['s'] or 0,
+            'utilisateurs': list(utilisateurs),
+        })
+
+    context = {
+        'entrepots': entrepots,
+        'total_entrepots': len(entrepots),
+        'q': q,
+    }
+    return render(request, 'utilisateurs/liste_entrepots.html', context)

@@ -52,6 +52,20 @@ def get_categories_autorisees(user):
     return list(cats.values_list('id', flat=True))
 
 
+def get_entrepot(user):
+    """Retourne l'objet Entrepôt de l'utilisateur dans un petit magasin.
+    Retourne None pour le grand magasin (principal) ou si pas d'entrepôt."""
+    if user.is_superuser:
+        return None
+    profil = _get_profil(user)
+    if not profil or not profil.entrepot:
+        return None
+    magasin = profil.magasin
+    if magasin and magasin.est_principal:
+        return None
+    return profil.entrepot
+
+
 def get_or_create_consommateur(magasin):
     """Retourne le client générique 'Consommateur' pour un magasin."""
     from clients.models import Client

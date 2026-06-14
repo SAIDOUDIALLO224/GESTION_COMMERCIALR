@@ -59,7 +59,7 @@
 
 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-5">
     <form method="get" class="flex gap-2">
-        <input type="text" name="search" value="{{ search }}" placeholder="Rechercher par numéro ou client..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <input type="text" name="search" value="{{ search }}" placeholder="Rechercher par numéro, client, produit ou catégorie..." class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
         <button type="submit" class="px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-colors">Rechercher</button>
     </form>
 </div>
@@ -72,6 +72,8 @@
                 <tr>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">Numéro</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">Client</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Produits</th>
+                    <th class="px-4 py-3 text-left font-semibold text-gray-600">Catégorie</th>
                     <th class="px-4 py-3 text-left font-semibold text-gray-600">Date</th>
                     <th class="px-4 py-3 text-right font-semibold text-gray-600">Montant</th>
                     <th class="px-4 py-3 text-right font-semibold text-gray-600">Payé</th>
@@ -84,6 +86,22 @@
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-3 font-mono font-semibold text-blue-700">{{ vente.numero }}</td>
                     <td class="px-4 py-3 text-gray-700">{{ vente.client.nom|default:"Vente anonyme" }}</td>
+                    <td class="px-4 py-3 text-gray-700">
+                        <div class="max-w-xs truncate" title="{% for l in vente.lignes.all %}{{ l.produit.nom }}{% if not forloop.last %}, {% endif %}{% endfor %}">
+                            {% for l in vente.lignes.all %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs mr-1 mb-0.5">{{ l.produit.nom }}{% if not forloop.last %}{% endif %}</span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-gray-500">
+                        {% with cats=vente.lignes.all %}
+                            {% if cats %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs">{{ cats.0.produit.categorie.nom|default:"—" }}</span>
+                            {% else %}
+                                <span class="text-gray-400">—</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
                     <td class="px-4 py-3 text-gray-500">{{ vente.date_vente|date:"d/m/Y H:i" }}</td>
                     <td class="px-4 py-3 text-right text-gray-900">{{ vente.montant_total|intcomma }} GNF</td>
                     <td class="px-4 py-3 text-right text-green-700 font-semibold">{{ vente.montant_paye|intcomma }} GNF</td>

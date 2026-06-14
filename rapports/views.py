@@ -197,11 +197,12 @@ def export_pdf_stock(request):
 
     # Calculer les quantités vendues par produit pour la période
     lignes_vente = LigneVente.objects.filter(
-        vente__date_vente__date__gte=date_debut,
-        vente__date_vente__date__lte=date_fin,
-    ).filter(
         Q(vente__magasin__in=magasins)
     )
+    if date_debut:
+        lignes_vente = lignes_vente.filter(vente__date_vente__date__gte=date_debut)
+    if date_fin:
+        lignes_vente = lignes_vente.filter(vente__date_vente__date__lte=date_fin)
     quantites_vendues = lignes_vente.values('produit__id', 'produit__nom').annotate(
         quantite_vendue=Sum('quantite')
     ).order_by('produit__nom')

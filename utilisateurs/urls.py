@@ -9,4 +9,6 @@ urlpatterns = [
     path('<int:pk>/modifier/', views.modifier_utilisateur, name='modifier'),
     path('<int:pk>/toggle-actif/', views.toggle_actif_utilisateur, name='toggle_actif'),
     path('<int:pk>/supprimer/', views.supprimer_utilisateur, name='supprimer'),
+    path('mon-entrepot/', views.mon_entrepot, name='mon_entrepot'),
+    path('entrepots/', views.liste_entrepots, name='liste_entrepots'),
 ]

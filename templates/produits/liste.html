@@ -85,7 +85,7 @@
             hx-trigger="keyup changed delay:350ms"
             hx-target="#produits-table"
             hx-swap="outerHTML"
-            hx-include="#cat-filter"
+            hx-include="#cat-filter, #entrepot-filter"
           />
         </div>
         <select
@@ -96,13 +96,30 @@
           hx-trigger="change"
           hx-target="#produits-table"
           hx-swap="outerHTML"
-          hx-include="#search-input"
+          hx-include="#search-input, #entrepot-filter"
         >
           <option value="">Toutes catégories</option>
           {% for cat in categories %}
             <option value="{{ cat.pk }}" {% if categorie_id == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.nom }}</option>
           {% endfor %}
         </select>
+        {% if entrepots_liste %}
+        <select
+          id="entrepot-filter"
+          name="entrepot"
+          class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          hx-get="{% url 'produits:liste' %}"
+          hx-trigger="change"
+          hx-target="#produits-table"
+          hx-swap="outerHTML"
+          hx-include="#search-input, #cat-filter"
+        >
+          <option value="">Tous entrepôts</option>
+          {% for e in entrepots_liste %}
+            <option value="{{ e.pk }}" {% if selected_entrepot == e.pk|stringformat:"s" %}selected{% endif %}>{{ e.nom }}</option>
+          {% endfor %}
+        </select>
+        {% endif %}
       </div>
     </div>
 

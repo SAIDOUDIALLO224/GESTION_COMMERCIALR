@@ -137,6 +137,12 @@
         <dt class="text-gray-500">Modifié le</dt>
         <dd class="text-gray-700">{{ produit.updated_at|date:"d/m/Y H:i" }}</dd>
       </div>
+      {% if produit.entrepot %}
+      <div class="flex justify-between border-t border-gray-100 pt-3">
+        <dt class="text-gray-500">Entrepôt</dt>
+        <dd class="font-semibold text-gray-900">{{ produit.entrepot.nom }}</dd>
+      </div>
+      {% endif %}
     </dl>
   </div>
 </div>

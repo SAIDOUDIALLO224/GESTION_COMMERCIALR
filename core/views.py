@@ -41,7 +41,8 @@ def dashboard(request):
         stock_actuel__lte=F('seuil_alerte'),
     ).filter(
 Q(magasin__in=magasins)
-    ).order_by('stock_actuel')[:10]
+    )
+    produits_alerte = produits_alerte.order_by('stock_actuel')[:10]
     
     # Clients avec dettes
     clients_dettes = Client.objects.filter(solde_du__gt=0).order_by('-solde_du')[:10]
@@ -168,7 +169,10 @@ def migrer_donnees(request):
 def changer_magasin(request):
     if request.method == 'POST':
         magasin_id = request.POST.get('magasin_id')
-        magasins = get_magasins_visibles(request.user)
+        if request.user.is_superuser:
+            magasins = Magasin.objects.all()
+        else:
+            magasins = get_magasins_visibles(request.user)
         magasin = get_object_or_404(magasins, pk=magasin_id)
         profil, created = ProfilUtilisateur.objects.get_or_create(
             user=request.user,

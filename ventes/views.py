@@ -16,6 +16,7 @@ from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML
 from core.utils import get_magasins_visibles, get_current_magasin, get_categories_autorisees, get_or_create_consommateur
+from core.models import Entrepot
 
 
 class VenteForm(forms.Form):
@@ -163,6 +164,11 @@ def nouvelle_vente(request):
     magasins = get_magasins_visibles(request.user)
     magasin = get_current_magasin(request.user)
     cat_ids = get_categories_autorisees(request.user)
+    entrepot = request.GET.get('entrepot', '')
+    if magasin and not magasin.est_principal:
+        entrepots_liste = Entrepot.objects.filter(magasin=magasin).order_by('nom')
+    else:
+        entrepots_liste = []
     if request.method == 'POST':
         form = VenteForm(request.POST, magasin=magasin)
         if form.is_valid():
@@ -193,9 +199,14 @@ def nouvelle_vente(request):
                     if not produit_id or not quantite:
                         continue
                     
-                    produit = Produit.objects.filter(pk=produit_id).filter(
+                    produit_qs = Produit.objects.filter(pk=produit_id).filter(
                         Q(magasin__in=magasins)
-                    ).first()
+                    )
+                    if cat_ids is not None:
+                        produit_qs = produit_qs.filter(categorie_id__in=cat_ids)
+                    if entrepot:
+                        produit_qs = produit_qs.filter(entrepot=entrepot)
+                    produit = produit_qs.first()
                     if not produit:
                         continue
                     quantite = Decimal(quantite)
@@ -270,26 +281,19 @@ def nouvelle_vente(request):
                 
                 vente.save()
                 
-                # Paiement pour la portion en espèce/chèque/virement
-                if montant_paye_saisi > 0 and client:
+                # Un seul paiement (cash + crédit combiné) pour éviter la fragmentation
+                montant_total_paye = montant_paye_saisi + credit_used
+                if montant_total_paye > 0 and client:
+                    notes = ''
+                    if credit_used > 0:
+                        notes = f'Dont {credit_used:,.0f} GNF de crédit disponible appliqué automatiquement.'
                     Paiement.objects.create(
                         vente=vente,
                         client=client,
-                        montant=montant_paye_saisi,
+                        montant=montant_total_paye,
                         montant_surplus=surplus,
                         mode_paiement=form.cleaned_data['mode_paiement'],
-                        utilisateur=request.user
-                    )
-                
-                # Paiement pour la portion couverte par le crédit disponible
-                if credit_used > 0 and client:
-                    Paiement.objects.create(
-                        vente=vente,
-                        client=client,
-                        montant=credit_used,
-                        montant_surplus=Decimal('0'),
-                        mode_paiement='CREDIT',
-                        notes='Crédit disponible appliqué automatiquement',
+                        notes=notes,
                         utilisateur=request.user,
                     )
                 
@@ -324,10 +328,14 @@ def nouvelle_vente(request):
     )
     if cat_ids is not None:
         produits = produits.filter(categorie_id__in=cat_ids)
+    if entrepot and entrepot.isdigit():
+        produits = produits.filter(entrepot_id=int(entrepot))
     produits = produits.select_related('categorie').order_by('categorie__nom', 'nom')
     context = {
         'form': form,
         'produits': produits,
+        'entrepots_liste': entrepots_liste,
+        'selected_entrepot': entrepot,
     }
     return render(request, 'ventes/nouvelle.html', context)
 
@@ -456,23 +464,6 @@ def encaisser_client(request):
             mode_paiement = form.cleaned_data['mode_paiement']
             reference = form.cleaned_data.get('reference', '')
             
-            total_solde_restant = sum(
-                v.solde_restant for v in Vente.objects.filter(client=client).filter(
-                    Q(magasin__in=magasins)
-                )
-            )
-            
-            if total_solde_restant <= 0:
-                messages.error(request, f'{client.nom} n\'a pas de dette en cours.')
-                return redirect('ventes:encaisser_client')
-            
-            if montant > total_solde_restant:
-                surplus = montant - total_solde_restant
-            else:
-                surplus = Decimal('0')
-            
-            restant_a_distribuer = montant
-            
             with transaction.atomic():
                 ventes_impayees = Vente.objects.filter(
                     client=client,
@@ -481,28 +472,57 @@ def encaisser_client(request):
                     Q(magasin__in=magasins)
                 ).order_by('date_vente')
                 
-                if not ventes_impayees.exists():
-                    messages.error(request, f'Aucune vente impayée pour {client.nom}.')
-                    return redirect('ventes:encaisser_client')
+                total_solde_restant = sum(v.solde_restant for v in ventes_impayees)
                 
-                paiement_principal = None
+                if total_solde_restant <= 0:
+                    # Aucune dette : tout le montant devient surplus
+                    surplus = montant
+                    # Créer une vente fictive pour lier le paiement
+                    vente = Vente.objects.create(
+                        numero=f"SURPLUS-{uuid.uuid4().hex[:8].upper()}",
+                        client=client,
+                        montant_total=Decimal('0'),
+                        montant_paye=Decimal('0'),
+                        solde_restant=Decimal('0'),
+                        statut='SOLDE',
+                        notes=f'Encaissement sans dette — surplus de {montant:,.0f} GNF',
+                        utilisateur=request.user,
+                        magasin=magasin,
+                    )
+                    Paiement.objects.create(
+                        vente=vente,
+                        client=client,
+                        montant=montant,
+                        montant_surplus=montant,
+                        mode_paiement=mode_paiement,
+                        reference=reference,
+                        utilisateur=request.user,
+                    )
+                    client.credit_disponible += montant
+                    client.save(update_fields=['credit_disponible'])
+                    messages.success(request, f'Encaissement de {montant:,.0f} GNF pour {client.nom}. Aucune dette en cours — montant ajouté au crédit disponible.')
+                    return redirect('clients:detail', pk=client.pk)
+                
+                surplus = max(Decimal('0'), montant - total_solde_restant)
+                restant_a_distribuer = montant
+                
+                # Un seul paiement pour le montant total (pas de fragmentation)
+                premiere_vente = ventes_impayees.first()
+                Paiement.objects.create(
+                    vente=premiere_vente,
+                    client=client,
+                    montant=montant,
+                    montant_surplus=surplus,
+                    mode_paiement=mode_paiement,
+                    reference=reference,
+                    utilisateur=request.user,
+                )
+                
                 for vente in ventes_impayees:
                     if restant_a_distribuer <= 0:
                         break
                     
                     montant_vente = min(restant_a_distribuer, vente.solde_restant)
-                    
-                    paiement = Paiement.objects.create(
-                        vente=vente,
-                        client=client,
-                        montant=montant_vente,
-                        montant_surplus=Decimal('0'),
-                        mode_paiement=mode_paiement,
-                        reference=reference,
-                        utilisateur=request.user,
-                    )
-                    if paiement_principal is None:
-                        paiement_principal = paiement
                     
                     vente.montant_paye = min(vente.montant_total, vente.montant_paye + montant_vente)
                     vente.solde_restant = max(Decimal('0'), vente.montant_total - vente.montant_paye)
@@ -510,10 +530,6 @@ def encaisser_client(request):
                     vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
                     
                     restant_a_distribuer -= montant_vente
-                
-                if surplus > 0 and paiement_principal:
-                    paiement_principal.montant_surplus = surplus
-                    paiement_principal.save(update_fields=['montant_surplus'])
                 
                 nouveau_solde_restant = sum(
                     v.solde_restant for v in Vente.objects.filter(client=client).filter(
@@ -561,33 +577,58 @@ def modifier_paiement(request, pk):
             ancien_surplus = paiement.surplus_effectif
             nouveau_montant = form.cleaned_data['montant']
             
-            vente = paiement.vente
             client = paiement.client
             
-            diff = nouveau_montant - ancien_montant
-            
             with transaction.atomic():
-                # Supprimer l'ancien surplus du crédit disponible
+                # 1. Annuler l'ancien surplus
                 if ancien_surplus > 0:
                     client.credit_disponible = max(Decimal('0'), client.credit_disponible - ancien_surplus)
                 
+                # 2. Annuler l'ancienne distribution : rendre le montant aux ventes
+                #    (augmenter solde_restant des ventes impayées FIFO)
+                restant_a_rendre = ancien_montant
+                ventes_payees = Vente.objects.filter(
+                    client=client,
+                    montant_paye__gt=0,
+                ).filter(
+                    Q(magasin__in=magasins)
+                ).order_by('-date_vente')  # dernière payée en premier (LIFO inverse)
+                for vente in ventes_payees:
+                    if restant_a_rendre <= 0:
+                        break
+                    montant_rendu = min(restant_a_rendre, vente.montant_paye)
+                    vente.montant_paye -= montant_rendu
+                    vente.solde_restant = vente.montant_total - vente.montant_paye
+                    vente.statut = 'SOLDE' if vente.solde_restant == 0 else ('PARTIEL' if vente.solde_restant > 0 else 'EN_ATTENTE')
+                    vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+                    restant_a_rendre -= montant_rendu
+                
+                # 3. Mettre à jour le paiement
                 paiement.montant = nouveau_montant
                 paiement.mode_paiement = form.cleaned_data['mode_paiement']
                 paiement.reference = form.cleaned_data.get('reference', '')
                 paiement.montant_surplus = Decimal('0')
                 paiement.save()
                 
-                if diff > 0:
-                    vente.montant_paye += diff
-                    vente.solde_restant = max(Decimal('0'), vente.montant_total - vente.montant_paye)
+                # 4. Redistribuer le nouveau montant FIFO sur les ventes impayées
+                restant_a_distribuer = nouveau_montant
+                ventes_impayees = Vente.objects.filter(
+                    client=client,
+                    solde_restant__gt=0,
+                ).filter(
+                    Q(magasin__in=magasins)
+                ).order_by('date_vente')
+                for vente in ventes_impayees:
+                    if restant_a_distribuer <= 0:
+                        break
+                    montant_vente = min(restant_a_distribuer, vente.solde_restant)
+                    vente.montant_paye += montant_vente
+                    vente.solde_restant = vente.montant_total - vente.montant_paye
                     vente.statut = 'SOLDE' if vente.solde_restant == 0 else 'PARTIEL'
                     vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
-                else:
-                    vente.montant_paye = max(Decimal('0'), vente.montant_paye + diff)
-                    vente.solde_restant += abs(diff)
-                    vente.statut = 'PARTIEL'
-                    vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+                    restant_a_distribuer -= montant_vente
                 
+                # 5. Calculer le nouveau solde et surplus
                 total_solde_restant = sum(
                     v.solde_restant for v in Vente.objects.filter(client=client).filter(
                         Q(magasin__in=magasins)
@@ -595,7 +636,6 @@ def modifier_paiement(request, pk):
                 )
                 client.solde_du = total_solde_restant
                 
-                # Calculer le nouveau surplus si toutes les dettes sont soldées
                 if total_solde_restant == 0:
                     total_paid = Paiement.objects.filter(client=client).filter(
                         Q(vente__magasin__in=magasins)
@@ -637,17 +677,30 @@ def supprimer_paiement(request, pk):
         ),
         pk=pk,
     )
-    client_pk = paiement.client.pk
-    vente = paiement.vente
+    client = paiement.client
+    client_pk = client.pk
+    montant_paiement = paiement.montant
     surplus_paiement = paiement.surplus_effectif
     
     with transaction.atomic():
-        vente.montant_paye = max(Decimal('0'), vente.montant_paye - paiement.montant)
-        vente.solde_restant = vente.montant_total - vente.montant_paye
-        vente.statut = 'EN_ATTENTE' if vente.solde_restant == vente.montant_total else ('PARTIEL' if vente.solde_restant > 0 else 'SOLDE')
-        vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+        # Rendre le montant aux ventes FIFO (augmenter solde_restant)
+        restant_a_rendre = montant_paiement
+        ventes_payees = Vente.objects.filter(
+            client=client,
+            montant_paye__gt=0,
+        ).filter(
+            Q(magasin__in=magasins)
+        ).order_by('-date_vente')
+        for vente in ventes_payees:
+            if restant_a_rendre <= 0:
+                break
+            montant_rendu = min(restant_a_rendre, vente.montant_paye)
+            vente.montant_paye -= montant_rendu
+            vente.solde_restant = vente.montant_total - vente.montant_paye
+            vente.statut = 'EN_ATTENTE' if vente.solde_restant == vente.montant_total else ('PARTIEL' if vente.solde_restant > 0 else 'SOLDE')
+            vente.save(update_fields=['montant_paye', 'solde_restant', 'statut'])
+            restant_a_rendre -= montant_rendu
         
-        client = paiement.client
         if surplus_paiement > 0:
             client.credit_disponible = max(Decimal('0'), client.credit_disponible - surplus_paiement)
         
@@ -669,17 +722,24 @@ def supprimer_paiement(request, pk):
 def liste_ventes(request):
     search = request.GET.get('search', '')
     magasins = get_magasins_visibles(request.user)
-    ventes = Vente.objects.select_related('client').filter(
+    ventes = Vente.objects.select_related('client').prefetch_related(
+        'lignes__produit__categorie'
+    ).filter(
         Q(magasin__in=magasins)
     ).order_by('-date_vente')
     
     if search:
-        ventes = ventes.filter(Q(numero__icontains=search) | Q(client__nom__icontains=search))
-
+        ventes = ventes.filter(
+            Q(numero__icontains=search)
+            | Q(client__nom__icontains=search)
+            | Q(lignes__produit__nom__icontains=search)
+            | Q(lignes__produit__categorie__nom__icontains=search)
+        ).distinct()
+    
     paginator = Paginator(ventes, 25)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-
+    
     total_ventes = Vente.objects.filter(
         Q(magasin__in=magasins)
     ).count()

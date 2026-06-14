@@ -53,6 +53,10 @@ class Produit(models.Model):
     )
     photo = models.ImageField(upload_to='produits/', blank=True, null=True, verbose_name=_("Photo"))
     actif = models.BooleanField(default=True, verbose_name=_("Actif"))
+    entrepot = models.ForeignKey(
+        'core.Entrepot', on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("Entrepôt"),
+    )
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Créé le"))
     updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Modifié le"))

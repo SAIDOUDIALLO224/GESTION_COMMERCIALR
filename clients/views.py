@@ -175,6 +175,9 @@ def liste_clients(request):
 
 @login_required
 def detail_client(request, pk):
+    from datetime import timedelta
+    from django.utils import timezone
+    
     magasin = get_current_magasin(request.user)
     client = get_object_or_404(Client.objects.filter(magasin=magasin), pk=pk)
     magasins = get_magasins_visibles(request.user)
@@ -184,13 +187,25 @@ def detail_client(request, pk):
     ventes_a_encaisser = Vente.objects.filter(client=client, solde_restant__gt=0).filter(
         Q(magasin__in=magasins)
     ).order_by('-date_vente')
-    paiements = Paiement.objects.filter(client=client).filter(
+    
+    paiements_all = Paiement.objects.filter(client=client).filter(
         Q(vente__magasin__in=magasins)
-    ).order_by('-date_paiement')[:30]
-
+    ).order_by('-date_paiement')
+    
+    periode = request.GET.get('periode', '2mois')
+    if periode == 'tout':
+        paiements_qs = paiements_all
+    else:
+        deux_mois = timezone.now() - timedelta(days=60)
+        paiements_qs = paiements_all.filter(date_paiement__gte=deux_mois)
+    
+    paginator_paiements = Paginator(paiements_qs, 50)
+    page_p = request.GET.get('page_p')
+    paiements_page = paginator_paiements.get_page(page_p)
+    
     total_ventes = ventes.aggregate(total=Sum('montant_total'))['total'] or 0
     total_paye = ventes.aggregate(total=Sum('montant_paye'))['total'] or 0
-    total_surplus = paiements.aggregate(total=Sum('montant_surplus'))['total'] or 0
+    total_surplus = paiements_all.aggregate(total=Sum('montant_surplus'))['total'] or 0
     
     total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client).filter(
         Q(magasin__in=magasins)
@@ -200,7 +215,9 @@ def detail_client(request, pk):
         'client': client,
         'ventes': ventes,
         'ventes_a_encaisser': ventes_a_encaisser,
-        'paiements': paiements,
+        'paiements': paiements_page,
+        'paiements_page_obj': paiements_page,
+        'periode': periode,
         'total_ventes': total_ventes,
         'total_paye': total_paye,
         'total_surplus': total_surplus,
@@ -394,7 +411,7 @@ def remboursement_surplus(request, pk):
             if montant > client.credit_disponible:
                 messages.error(request, f'Le montant ne peut pas dépasser le crédit disponible ({client.credit_disponible:,.0f} GNF).')
             else:
-                Vente.objects.create(
+                vente = Vente.objects.create(
                     numero=f"REMBOURS-{uuid.uuid4().hex[:8].upper()}",
                     client=client,
                     montant_total=montant,
@@ -402,6 +419,16 @@ def remboursement_surplus(request, pk):
                     solde_restant=Decimal('0'),
                     statut='SOLDE',
                     notes=f"Remboursement surplus - Mode: {mode_paiement}" + (f" - {motif}" if motif else ""),
+                    utilisateur=request.user,
+                    magasin=get_current_magasin(request.user),
+                )
+                
+                Paiement.objects.create(
+                    vente=vente,
+                    client=client,
+                    montant=montant,
+                    mode_paiement=mode_paiement,
+                    notes=f"Remboursement surplus" + (f" - {motif}" if motif else ""),
                     utilisateur=request.user,
                 )
                 

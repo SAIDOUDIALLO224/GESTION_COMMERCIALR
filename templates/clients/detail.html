@@ -135,9 +135,21 @@
         {% endif %}
     </div>
 
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="px-5 py-4 border-b border-gray-200 bg-gray-50">
+    <div id="paiements" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
             <h2 class="text-lg font-semibold text-gray-900">Historique des paiements</h2>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500">
+                    {% if periode == 'tout' %}
+                        Tous les paiements
+                    {% else %}
+                        Derniers 2 mois
+                    {% endif %}
+                </span>
+                <a href="?{% if periode == 'tout' %}periode=2mois{% else %}periode=tout{% endif %}#paiements" class="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                    {% if periode == 'tout' %}Voir 2 mois{% else %}Voir tout{% endif %}
+                </a>
+            </div>
         </div>
         {% if paiements %}
         <div class="overflow-x-auto">
@@ -150,6 +162,7 @@
                         <th class="px-4 py-3 text-right font-semibold text-gray-600">Surplus</th>
                         <th class="px-4 py-3 text-left font-semibold text-gray-600">Mode</th>
                         <th class="px-4 py-3 text-left font-semibold text-gray-600">Référence</th>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-600">Notes</th>
                         <th class="px-4 py-3 text-right font-semibold text-gray-600">Action</th>
                     </tr>
                 </thead>
@@ -168,6 +181,7 @@
                         </td>
                         <td class="px-4 py-3 text-gray-700">{{ paiement.get_mode_paiement_display }}</td>
                         <td class="px-4 py-3 text-gray-500">{{ paiement.reference|default:'—' }}</td>
+                        <td class="px-4 py-3 text-gray-500 max-w-xs truncate" title="{{ paiement.notes }}">{{ paiement.notes|default:'—' }}</td>
                         <td class="px-4 py-3 text-right">
                             <div class="inline-flex items-center gap-2">
                                 <a href="{% url 'ventes:modifier_paiement' paiement.pk %}" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors">Modifier</a>
@@ -180,6 +194,19 @@
                 </tbody>
             </table>
         </div>
+        {% if paiements_page_obj.has_other_pages %}
+        <div class="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-white">
+            <p class="text-sm text-gray-600">Page {{ paiements_page_obj.number }} / {{ paiements_page_obj.paginator.num_pages }}</p>
+            <div class="flex gap-1">
+                {% if paiements_page_obj.has_previous %}
+                    <a href="?page_p={{ paiements_page_obj.previous_page_number }}&periode={{ periode }}#paiements" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50">Préc.</a>
+                {% endif %}
+                {% if paiements_page_obj.has_next %}
+                    <a href="?page_p={{ paiements_page_obj.next_page_number }}&periode={{ periode }}#paiements" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50">Suiv.</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
         {% else %}
         <div class="py-12 text-center text-gray-400 text-sm">Aucun paiement enregistré.</div>
         {% endif %}

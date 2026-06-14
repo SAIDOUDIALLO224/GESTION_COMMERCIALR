@@ -13,21 +13,30 @@ from django import forms
 from core.utils import get_magasins_visibles, get_current_magasin, get_categories_autorisees
 
 
+class ProduitAvecCategorieField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        cat = obj.categorie.nom if obj.categorie else 'Sans catégorie'
+        return f'[{cat}] {obj.nom}'
+
+
 class AjustementStockForm(forms.Form):
     def __init__(self, *args, **kwargs):
         magasins = kwargs.pop('magasins', None)
         cat_ids = kwargs.pop('cat_ids', None)
+        entrepot = kwargs.pop('entrepot', None)
         super().__init__(*args, **kwargs)
         if magasins is not None:
-            qs = Produit.objects.filter(Q(magasin__in=magasins))
+            qs = Produit.objects.filter(Q(magasin__in=magasins)).select_related('categorie')
             if cat_ids is not None:
                 qs = qs.filter(categorie_id__in=cat_ids)
+            if entrepot:
+                qs = qs.filter(entrepot=entrepot)
             self.fields['produit'].queryset = qs
             self.fields['fournisseur'].queryset = Fournisseur.objects.filter(
                 Q(magasin__in=magasins)
             ).order_by('nom')
 
-    produit = forms.ModelChoiceField(
+    produit = ProduitAvecCategorieField(
         queryset=Produit.objects.all(),
         widget=forms.Select(attrs={
             'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'

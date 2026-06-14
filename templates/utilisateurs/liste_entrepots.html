@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% block title %}Entrepôts - GesStock Madina{% endblock %}
+{% block page_title %}Entrepôts{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <p class="text-sm text-gray-500">{{ total_entrepots }} entrepôt(s) dans ce magasin</p>
+    <div class="flex items-center gap-2">
+        <form method="get" class="flex items-center gap-2">
+            <input type="text" name="q" value="{{ q }}" placeholder="Rechercher..."
+                   class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                Filtrer
+            </button>
+            {% if q %}
+            <a href="{% url 'utilisateurs:liste_entrepots' %}" class="px-3 py-1.5 text-sm font-medium text-gray-700 border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors">Réinitialiser</a>
+            {% endif %}
+        </form>
+        <form method="post" class="flex items-center gap-2">
+            {% csrf_token %}
+            <input type="text" name="nom" placeholder="Nouvel entrepôt..." maxlength="100" required
+                   class="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button type="submit" class="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                + Créer
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 gap-6">
+    {% for e in entrepots %}
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div class="p-5">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">{{ e.nom }}</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">
+                        Utilisateurs : {{ e.utilisateurs|join:", "|default:"Aucun" }}
+                    </p>
+                </div>
+                <span class="text-xs font-semibold bg-blue-100 text-blue-800 px-2.5 py-1 rounded-full">
+                    {{ e.nb_produits }} produit{{ e.nb_produits|pluralize }}
+                </span>
+            </div>
+            <div class="mt-4 grid grid-cols-3 gap-4 text-center">
+                <div class="bg-gray-50 rounded-lg py-3">
+                    <p class="text-lg font-bold text-gray-900">{{ e.nb_ventes }}</p>
+                    <p class="text-xs text-gray-500">Ventes</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg py-3">
+                    <p class="text-lg font-bold text-gray-900">{{ e.total_ventes|floatformat:0 }} GNF</p>
+                    <p class="text-xs text-gray-500">Chiffre d'affaires</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg py-3">
+                    <p class="text-lg font-bold text-gray-900">{{ e.stock_total|floatformat:3 }}</p>
+                    <p class="text-xs text-gray-500">Stock total</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-10 text-center text-gray-400">
+        Aucun entrepôt créé dans ce magasin.
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

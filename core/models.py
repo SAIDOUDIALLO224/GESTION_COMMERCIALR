@@ -23,6 +23,24 @@ class Magasin(models.Model):
         return self.nom
 
 
+class Entrepot(models.Model):
+    """Entrepôt dans un petit magasin"""
+    nom = models.CharField(max_length=100, verbose_name=_("Nom"))
+    magasin = models.ForeignKey(
+        Magasin, on_delete=models.CASCADE,
+        verbose_name=_("Magasin")
+    )
+
+    class Meta:
+        verbose_name = _("Entrepôt")
+        verbose_name_plural = _("Entrepôts")
+        ordering = ['nom']
+        unique_together = ('nom', 'magasin')
+
+    def __str__(self):
+        return self.nom
+
+
 class Configuration(models.Model):
     """Configuration globale de l'application"""
     nom_magasin = models.CharField(max_length=200, default="Magasin Madina", verbose_name=_("Nom du magasin"))
