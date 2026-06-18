@@ -19,7 +19,6 @@ def _produits_visibles(magasins, entrepot=None):
     return qs
 from stock.models import MouvementStock
 from django import forms
-from weasyprint import HTML
 from utilisateurs.decorators import gerant_required
 from core.utils import get_magasins_visibles, get_current_magasin, get_categories_autorisees
 
@@ -30,6 +29,8 @@ class ProduitForm(forms.ModelForm):
         cat_ids = kwargs.pop('cat_ids', None)
         super().__init__(*args, **kwargs)
         self._cat_ids = cat_ids
+        self._magasin = magasin
+
         if not self.instance or not self.instance.pk:
             self.fields['code'].required = False
         else:
@@ -39,15 +40,18 @@ class ProduitForm(forms.ModelForm):
             self.ancien_prix_vente_gros = self.instance.prix_vente_gros
             self.ancien_stock_actuel = self.instance.stock_actuel
             self.ancien_seuil_alerte = self.instance.seuil_alerte
+
         if magasin:
             qs = Categorie.objects.filter(magasin=magasin)
             if cat_ids is not None:
                 qs = qs.filter(pk__in=cat_ids)
             self.fields['categorie'].queryset = qs
+
             if not magasin.est_principal:
                 entrepots_qs = Entrepot.objects.filter(magasin=magasin).order_by('nom')
                 self.fields['entrepot'] = forms.ModelChoiceField(
-                    queryset=entrepots_qs, required=True,
+                    queryset=entrepots_qs,
+                    required=True,
                     label="Entrepôt",
                     widget=forms.Select(attrs={
                         'class': 'w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white',
@@ -196,6 +200,7 @@ def imprimer_produits(request):
         'categorie_nom': categorie_nom,
     }
 
+    from weasyprint import HTML
     html_string = render_to_string('produits/pdf_inventaire.html', context, request=request)
     pdf = HTML(string=html_string).write_pdf()
 
@@ -234,8 +239,7 @@ def creer_produit(request):
         if form.is_valid():
             produit = form.save(commit=False)
             produit.magasin = magasin
-            if 'entrepot' in form.cleaned_data and form.cleaned_data['entrepot']:
-                produit.entrepot = form.cleaned_data['entrepot']
+            produit.entrepot = None if magasin and magasin.est_principal else form.cleaned_data.get('entrepot')
             produit.save()
             if request.headers.get('HX-Request'):
                 messages.success(request, 'Produit créé avec succès!')
@@ -272,8 +276,7 @@ def modifier_produit(request, pk):
         form = ProduitForm(request.POST, request.FILES, instance=produit, magasin=magasin, cat_ids=cat_ids)
         if form.is_valid():
             produit = form.save(commit=False)
-            if 'entrepot' in form.cleaned_data and form.cleaned_data['entrepot']:
-                produit.entrepot = form.cleaned_data['entrepot']
+            produit.entrepot = None if magasin and magasin.est_principal else form.cleaned_data.get('entrepot')
             produit.save()
             messages.success(request, 'Produit modifié avec succès!')
             return redirect('produits:detail', pk=produit.pk)
