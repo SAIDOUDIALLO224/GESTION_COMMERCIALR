@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; font-size: 12px; }
+        .header { text-align: center; border-bottom: 2px solid #1e40af; padding-bottom: 14px; margin-bottom: 20px; }
+        .header h1 { margin: 0; color: #1e40af; }
+        .meta { margin: 4px 0; color: #555; font-size: 11px; }
+        .infos-client { margin: 14px 0 18px 0; }
+        .infos-client p { margin: 3px 0; }
+        .periode { font-weight: bold; color: #1e40af; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f3f4f6; border-bottom: 2px solid #1e40af; text-align: left; padding: 8px; }
+        td { border-bottom: 1px solid #e5e7eb; padding: 7px 8px; }
+        .right { text-align: right; }
+        .center { text-align: center; }
+        .ligne-depart td { background: #eff6ff; font-weight: bold; }
+        .ligne-finale td { background: #1e3a8a; color: #fff; font-weight: bold; }
+        .debit { color: #dc2626; }
+        .credit { color: #059669; }
+        .footer { margin-top: 24px; font-size: 11px; color: #666; text-align: center; }
+    </style>
+</head>
+<body>
+    {% load humanize %}
+
+    <div class="header">
+        <h1>Relevé de compte</h1>
+        {% if magasin and not magasin.est_principal %}<p class="meta" style="font-weight:bold; color:#1e40af;">{{ magasin.nom }} — {{ magasin.adresse|default:"Marché de Madina, Conakry, Guinée" }}</p>{% endif %}
+        <p class="meta">Généré le {% now "d/m/Y à H:i" %}</p>
+    </div>
+
+    <div class="infos-client">
+        <p><strong>Client :</strong> {{ client.nom }}</p>
+        <p><strong>Téléphone :</strong> {{ client.telephone }}{% if client.telephone2 %} / {{ client.telephone2 }}{% endif %}</p>
+        {% if client.quartier %}<p><strong>Adresse :</strong> {{ client.quartier }}</p>{% endif %}
+        <p class="periode">Période du {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th class="right">Débit</th>
+                <th class="right">Crédit</th>
+                <th class="right">Solde</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="ligne-depart">
+                <td>{{ date_debut|date:"d/m/Y" }}</td>
+                <td>Solde au début de la période</td>
+                <td class="right"></td>
+                <td class="right"></td>
+                <td class="right">{{ solde_depart|floatformat:0|intcomma }} GNF</td>
+            </tr>
+            {% for m in mouvements %}
+            <tr>
+                <td>{{ m.date|date:"d/m/Y" }}</td>
+                <td>{{ m.description }}</td>
+                <td class="right debit">{% if m.debit > 0 %}{{ m.debit|floatformat:0|intcomma }} GNF{% endif %}</td>
+                <td class="right credit">{% if m.credit > 0 %}{{ m.credit|floatformat:0|intcomma }} GNF{% endif %}</td>
+                <td class="right">{{ m.solde|floatformat:0|intcomma }} GNF</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="center">Aucun mouvement durant cette période.</td>
+            </tr>
+            {% endfor %}
+            <tr class="ligne-finale">
+                <td>{{ date_fin|date:"d/m/Y" }}</td>
+                <td>Solde au {{ date_fin|date:"d/m/Y" }}</td>
+                <td class="right"></td>
+                <td class="right"></td>
+                <td class="right">{{ solde_final|floatformat:0|intcomma }} GNF</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Document système GesStock Madina — Ce relevé justifie la dette du client à la date indiquée.
+    </div>
+</body>
+</html>

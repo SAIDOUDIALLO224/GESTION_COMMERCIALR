@@ -9,6 +9,7 @@ urlpatterns = [
     path('dette-initiale/', views.dette_initiale, name='dette_initiale'),
     path('credit-disponible-initial/', views.credit_disponible_initial, name='credit_initial'),
     path('<int:pk>/', views.detail_client, name='detail'),
+    path('<int:pk>/releve/', views.releve_compte_client, name='releve_compte'),
     path('<int:pk>/remboursement-surplus/', views.remboursement_surplus, name='remboursement_surplus'),
     path('creer/', views.creer_client, name='creer'),
     path('<int:pk>/modifier/', views.modifier_client, name='modifier'),

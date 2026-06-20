@@ -38,6 +38,10 @@
                 Rembourser surplus
             </a>
             {% endif %}
+            <button type="button" onclick="document.getElementById('modal-releve').classList.remove('hidden')" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Relevé
+            </button>
             <a href="{% url 'clients:modifier' client.pk %}" class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                 Modifier
@@ -210,6 +214,27 @@
         {% else %}
         <div class="py-12 text-center text-gray-400 text-sm">Aucun paiement enregistré.</div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Modale Relevé de compte -->
+<div id="modal-releve" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-sm p-6">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">Relevé de compte — {{ client.nom }}</h3>
+        <form method="get" action="{% url 'clients:releve_compte' client.pk %}" target="_blank">
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Date début</label>
+                <input type="date" name="date_debut" value="{{ date_debut_defaut|default:'' }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Date fin</label>
+                <input type="date" name="date_fin" value="{{ date_fin_defaut|default:'' }}" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex items-center justify-end gap-2">
+                <button type="button" onclick="document.getElementById('modal-releve').classList.add('hidden')" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors">Annuler</button>
+                <button type="submit" class="px-3 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors">Télécharger le PDF</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}

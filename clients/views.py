@@ -8,6 +8,7 @@ from ventes.models import Vente, LigneVente
 from paiements.models import Paiement
 from django import forms
 from decimal import Decimal
+from datetime import timedelta
 import uuid
 from core.utils import get_magasins_visibles, get_current_magasin
 
@@ -210,7 +211,10 @@ def detail_client(request, pk):
     total_solde_restant = sum(v.solde_restant for v in Vente.objects.filter(client=client).filter(
         Q(magasin__in=magasins)
     ))
-    
+
+    aujourd_hui = timezone.localdate()
+    premier_jour_mois_precedent = (aujourd_hui.replace(day=1) - timedelta(days=1)).replace(day=1)
+
     context = {
         'client': client,
         'ventes': ventes,
@@ -222,6 +226,8 @@ def detail_client(request, pk):
         'total_paye': total_paye,
         'total_surplus': total_surplus,
         'total_solde_restant': total_solde_restant,
+        'date_debut_defaut': premier_jour_mois_precedent.isoformat(),
+        'date_fin_defaut': aujourd_hui.isoformat(),
     }
     return render(request, 'clients/detail.html', context)
 
@@ -325,6 +331,106 @@ def imprimer_clients_debiteurs(request):
     
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="clients_debiteurs.pdf"'
+    return response
+
+
+@login_required
+def releve_compte_client(request, pk):
+    """Génère le relevé de compte PDF d'un client entre deux dates.
+
+    Le solde de départ (à date_debut) est recalculé à rebours à partir du
+    solde_du actuel du client, en retirant les ventes et en rajoutant les
+    paiements survenus depuis date_debut. Ainsi le solde final affiché en
+    bas du relevé (à date_fin = aujourd'hui par défaut) correspond toujours
+    exactement au solde_du réel du client.
+    """
+    from datetime import date, datetime
+    from django.http import HttpResponse
+    from django.template.loader import render_to_string
+    from django.utils import timezone
+    from weasyprint import HTML
+
+    magasin = get_current_magasin(request.user)
+    magasins = get_magasins_visibles(request.user)
+    client = get_object_or_404(Client.objects.filter(magasin=magasin), pk=pk)
+
+    aujourd_hui = timezone.localdate()
+    premier_jour_mois_precedent = (aujourd_hui.replace(day=1) - timedelta(days=1)).replace(day=1)
+
+    date_debut_str = request.GET.get('date_debut', '')
+    date_fin_str = request.GET.get('date_fin', '')
+
+    try:
+        date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date() if date_debut_str else premier_jour_mois_precedent
+    except ValueError:
+        date_debut = premier_jour_mois_precedent
+
+    try:
+        date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date() if date_fin_str else aujourd_hui
+    except ValueError:
+        date_fin = aujourd_hui
+
+    # Bornes datetime pour filtrer les DateTimeField (date_vente, date_paiement)
+    debut_dt = timezone.make_aware(datetime.combine(date_debut, datetime.min.time()))
+    fin_dt = timezone.make_aware(datetime.combine(date_fin, datetime.max.time()))
+
+    ventes_qs = Vente.objects.filter(client=client).filter(Q(magasin__in=magasins))
+    paiements_qs = Paiement.objects.filter(client=client).filter(Q(vente__magasin__in=magasins))
+
+    # --- Calcul du solde de départ (à rebours depuis solde_du actuel) ---
+    ventes_depuis_debut = ventes_qs.filter(date_vente__gte=debut_dt)
+    paiements_depuis_debut = paiements_qs.filter(date_paiement__gte=debut_dt)
+
+    total_ventes_depuis_debut = ventes_depuis_debut.aggregate(total=Sum('montant_total'))['total'] or Decimal('0')
+    total_paiements_depuis_debut = paiements_depuis_debut.aggregate(total=Sum('montant'))['total'] or Decimal('0')
+
+    solde_depart = client.solde_du - total_ventes_depuis_debut + total_paiements_depuis_debut
+
+    # --- Lignes du relevé (entre date_debut et date_fin inclus) ---
+    ventes_periode = ventes_qs.filter(date_vente__gte=debut_dt, date_vente__lte=fin_dt)
+    paiements_periode = paiements_qs.filter(date_paiement__gte=debut_dt, date_paiement__lte=fin_dt)
+
+    mouvements = []
+    for v in ventes_periode:
+        mouvements.append({
+            'date': v.date_vente,
+            'description': f"Vente {v.numero}",
+            'debit': v.montant_total,
+            'credit': Decimal('0'),
+        })
+    for p in paiements_periode:
+        mouvements.append({
+            'date': p.date_paiement,
+            'description': f"Paiement ({p.get_mode_paiement_display()})" + (f" — {p.reference}" if p.reference else ""),
+            'debit': Decimal('0'),
+            'credit': p.montant,
+        })
+
+    mouvements.sort(key=lambda m: m['date'])
+
+    solde_courant = solde_depart
+    for m in mouvements:
+        solde_courant = solde_courant + m['debit'] - m['credit']
+        m['solde'] = solde_courant
+
+    solde_final = solde_courant
+
+    context = {
+        'client': client,
+        'magasin': magasin,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'solde_depart': solde_depart,
+        'mouvements': mouvements,
+        'solde_final': solde_final,
+    }
+
+    html_string = render_to_string('clients/pdf_releve.html', context, request=request)
+    pdf = HTML(string=html_string).write_pdf()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    nom_fichier = f"releve_{client.nom.replace(' ', '_')}_{date_debut}_{date_fin}.pdf"
+    response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
     return response
 
 

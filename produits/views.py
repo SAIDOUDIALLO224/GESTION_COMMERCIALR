@@ -28,6 +28,7 @@ class ProduitForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         magasin = kwargs.pop('magasin', None)
         cat_ids = kwargs.pop('cat_ids', None)
+        user = kwargs.pop('user', None)  # ← AJOUT
         super().__init__(*args, **kwargs)
         self._cat_ids = cat_ids
         if not self.instance or not self.instance.pk:
@@ -44,10 +45,9 @@ class ProduitForm(forms.ModelForm):
             if cat_ids is not None:
                 qs = qs.filter(pk__in=cat_ids)
             self.fields['categorie'].queryset = qs
-            # Le champ entrepôt n'apparaît que si le magasin COURANT n'est pas le
-            # magasin principal. Quand l'admin bascule sur un petit magasin via
-            # le sélecteur d'en-tête, il doit voir l'entrepôt comme un gérant normal
-            if not magasin.est_principal:
+            # ← MODIFIÉ : pas d'entrepôt pour le superuser (magasin principal / admin)
+            is_superuser = user.is_superuser if user else False
+            if not magasin.est_principal and not is_superuser:
                 entrepots_qs = Entrepot.objects.filter(magasin=magasin).order_by('nom')
                 self.fields['entrepot'] = forms.ModelChoiceField(
                     queryset=entrepots_qs, required=True,
@@ -233,7 +233,7 @@ def creer_produit(request):
     magasin = get_current_magasin(request.user)
     cat_ids = get_categories_autorisees(request.user)
     if request.method == 'POST':
-        form = ProduitForm(request.POST, request.FILES, magasin=magasin, cat_ids=cat_ids)
+        form = ProduitForm(request.POST, request.FILES, magasin=magasin, cat_ids=cat_ids, user=request.user)  # ← MODIFIÉ
         if form.is_valid():
             produit = form.save(commit=False)
             produit.magasin = magasin
@@ -247,7 +247,7 @@ def creer_produit(request):
                 messages.success(request, 'Produit créé avec succès!')
                 return redirect('produits:liste')
     else:
-        form = ProduitForm(magasin=magasin, cat_ids=cat_ids)
+        form = ProduitForm(magasin=magasin, cat_ids=cat_ids, user=request.user)  # ← MODIFIÉ
 
     context = {
         'form': form,
@@ -272,7 +272,7 @@ def modifier_produit(request, pk):
         qs = qs.filter(categorie_id__in=cat_ids)
     produit = get_object_or_404(qs, pk=pk)
     if request.method == 'POST':
-        form = ProduitForm(request.POST, request.FILES, instance=produit, magasin=magasin, cat_ids=cat_ids)
+        form = ProduitForm(request.POST, request.FILES, instance=produit, magasin=magasin, cat_ids=cat_ids, user=request.user)  # ← MODIFIÉ
         if form.is_valid():
             produit = form.save(commit=False)
             if 'entrepot' in form.cleaned_data and form.cleaned_data['entrepot']:
@@ -281,7 +281,7 @@ def modifier_produit(request, pk):
             messages.success(request, 'Produit modifié avec succès!')
             return redirect('produits:detail', pk=produit.pk)
     else:
-        form = ProduitForm(instance=produit, magasin=magasin, cat_ids=cat_ids)
+        form = ProduitForm(instance=produit, magasin=magasin, cat_ids=cat_ids, user=request.user)  # ← MODIFIÉ
 
     context = {
         'form': form,
