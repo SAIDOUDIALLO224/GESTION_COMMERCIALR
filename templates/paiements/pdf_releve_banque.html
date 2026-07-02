@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 15mm 12mm 20mm 12mm;
+            @bottom-center {
+                content: "Page " counter(page) " / " counter(pages);
+                font-size: 10px;
+                color: #666;
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: #1a1a1a;
+        }
+
+        /* EN-TÊTE — affiché sur chaque page */
+        .header {
+            border-bottom: 3px solid #1e40af;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+        }
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .header-titre h1 {
+            font-size: 20px;
+            color: #1e40af;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .header-titre p {
+            font-size: 10px;
+            color: #555;
+            margin-top: 2px;
+        }
+        .header-meta {
+            text-align: right;
+            font-size: 10px;
+            color: #555;
+        }
+        .header-meta strong {
+            color: #1e40af;
+        }
+        .badge-periode {
+            display: inline-block;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 10px;
+            color: #1e40af;
+            font-weight: bold;
+            margin-top: 6px;
+        }
+
+        /* SOLDE DE DÉPART */
+        .solde-depart {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .solde-depart span {
+            font-size: 11px;
+            color: #0369a1;
+            font-weight: bold;
+        }
+        .solde-depart .montant {
+            font-size: 13px;
+            color: #0369a1;
+        }
+
+        /* TABLEAU */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10.5px;
+        }
+        thead {
+            display: table-header-group;
+        }
+        thead tr th {
+            background: #1e40af;
+            color: #fff;
+            padding: 7px 6px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        thead tr th.right { text-align: right; }
+
+        tbody tr td {
+            padding: 6px 6px;
+            border-bottom: 1px solid #e5e7eb;
+            vertical-align: top;
+        }
+        tbody tr:nth-child(even) td {
+            background: #f9fafb;
+        }
+        tbody tr:hover td {
+            background: #eff6ff;
+        }
+
+        .right { text-align: right; }
+        .center { text-align: center; }
+
+        .debit  { color: #dc2626; font-weight: 600; }
+        .credit { color: #059669; font-weight: 600; }
+        .solde-cell { color: #1e40af; font-weight: 600; }
+
+        /* PIED DE TABLEAU — affiché uniquement sur la dernière page */
+        tfoot {
+            display: table-footer-group;
+        }
+        tfoot tr.totaux td {
+            background: #1e3a8a;
+            color: #fff;
+            font-weight: bold;
+            padding: 8px 6px;
+            border-top: 2px solid #1e40af;
+            font-size: 11px;
+        }
+        tfoot tr.totaux td.right { text-align: right; }
+
+        tfoot tr.solde-final td {
+            background: #1e40af;
+            color: #fff;
+            font-weight: bold;
+            padding: 10px 6px;
+            font-size: 13px;
+        }
+        tfoot tr.solde-final td.right { text-align: right; }
+
+        /* PIED DE PAGE DOC */
+        .footer-doc {
+            margin-top: 14px;
+            padding-top: 8px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 9px;
+            color: #9ca3af;
+            text-align: center;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: #6b7280;
+            padding: 24px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+{% load humanize %}
+
+<!-- EN-TÊTE -->
+<div class="header">
+    <div class="header-top">
+        <div class="header-titre">
+            <h1>Relevé de compte bancaire</h1>
+            <p>GesStock Madina — Marché de Madina, Conakry, Guinée</p>
+        </div>
+        <div class="header-meta">
+            <div>Généré le {% now "d/m/Y à H:i" %}</div>
+            <div class="badge-periode">
+                Du {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- SOLDE DE DÉPART -->
+<div class="solde-depart">
+    <span>Solde au {{ date_debut|date:"d/m/Y" }} (report antérieur)</span>
+    <span class="montant">{{ solde_depart|floatformat:0|intcomma }} GNF</span>
+</div>
+
+<!-- TABLEAU DES OPÉRATIONS -->
+<table>
+    <thead>
+        <tr>
+            <th style="width:11%;">Date</th>
+            <th style="width:26%;">Client</th>
+            <th style="width:31%;">Motif</th>
+            <th class="right" style="width:13%;">Débit</th>
+            <th class="right" style="width:13%;">Crédit</th>
+            <th class="right" style="width:13%;">Solde</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ligne in lignes %}
+        <tr>
+            <td>{{ ligne.date|date:"d/m/Y" }}</td>
+            <td>{{ ligne.client }}</td>
+            <td>{{ ligne.motif|default:"—" }}</td>
+            <td class="right debit">
+                {% if ligne.debit > 0 %}{{ ligne.debit|floatformat:0|intcomma }} GNF{% else %}—{% endif %}
+            </td>
+            <td class="right credit">
+                {% if ligne.credit > 0 %}{{ ligne.credit|floatformat:0|intcomma }} GNF{% else %}—{% endif %}
+            </td>
+            <td class="right solde-cell">{{ ligne.solde|floatformat:0|intcomma }} GNF</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" class="empty-msg">Aucune opération durant cette période.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr class="totaux">
+            <td colspan="3">Totaux de la période</td>
+            <td class="right debit">{{ total_debit_periode|floatformat:0|intcomma }} GNF</td>
+            <td class="right credit">{{ total_credit_periode|floatformat:0|intcomma }} GNF</td>
+            <td class="right">—</td>
+        </tr>
+        <tr class="solde-final">
+            <td colspan="5">Solde bancaire au {{ date_fin|date:"d/m/Y" }}</td>
+            <td class="right">{{ solde_final|floatformat:0|intcomma }} GNF</td>
+        </tr>
+    </tfoot>
+</table>
+
+<div class="footer-doc">
+    Document confidentiel — GesStock Madina — Ce relevé justifie le solde bancaire à la date indiquée.
+</div>
+
+</body>
+</html>
